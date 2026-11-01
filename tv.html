@@ -275,6 +275,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const sessionRef = db.ref('montreal_session');
+    const tvStatusRef = db.ref('montreal_session/tv_status');
 
     const unlockScreen = document.getElementById('unlockScreen');
     const videoContainer = document.getElementById('videoContainer');
@@ -295,16 +296,29 @@
     let lastClimaxState = null;
     let lastSfxTimestamp = Date.now();
     let lastTvEventTimestamp = Date.now();
+    let lastHealthPingSeen = 0;
 
-    function sendHeartbeat() {
-      db.ref('montreal_session/tv_status').set({
+    // Sistema de Presença em Tempo Real (Funciona mesmo com a aba em segundo plano no PC)
+    function updateTvPresence() {
+      tvStatusRef.set({
         online: true,
         audio_unlocked: audioUnlocked,
         last_ping: Date.now()
       });
+      tvStatusRef.onDisconnect().set({
+        online: false,
+        audio_unlocked: false,
+        last_ping: Date.now()
+      });
     }
-    sendHeartbeat();
-    setInterval(sendHeartbeat, 4000);
+
+    db.ref('.info/connected').on('value', snap => {
+      if (snap.val() === true) {
+        updateTvPresence();
+      }
+    });
+
+    setInterval(updateTvPresence, 4000);
 
     function getMediaPath(filename) {
       return encodeURI("media/" + filename);
@@ -316,9 +330,8 @@
       audioUnlocked = true;
       unlockScreen.style.display = "none";
 
-      // Limpa qualquer resíduo de vitória/derrota antigo que tenha ficado preso antes de armar a TV
       sessionRef.update({ climax_result: null });
-      sendHeartbeat();
+      updateTvPresence();
 
       huntingMusic.volume = 0;
       huntingMusic.play().then(() => {
@@ -336,6 +349,12 @@
     sessionRef.on('value', snap => {
       const data = snap.val();
       if (!data) return;
+
+      // Responde instantaneamente ao Ping de Diagnóstico do Master App (mesmo em aba oculta)
+      if (data.health_ping && data.health_ping !== lastHealthPingSeen) {
+        lastHealthPingSeen = data.health_ping;
+        updateTvPresence();
+      }
 
       if (data.game_power === "off") {
         stopHuntingSequence();
@@ -373,7 +392,6 @@
         }
       }
 
-      // Só dispara vídeos e caçadas depois que o professor deu o clique inicial na tela da TV
       if (!audioUnlocked) return;
 
       if (data.status === "hunting" && !isHunting) {
@@ -409,7 +427,6 @@
         containmentStatus.className = "readout-line";
         containmentStatus.style.color = "var(--green)";
         emkReading.textContent = "ELECTROMAGNETIC FIELD: 0.0 mG (PURIFIED)";
-        // Limpa imediatamente no Firebase para nunca repetir se a página for atualizada
         sessionRef.update({ climax_result: null });
         playTvVideo("END-COMPLETE.mp4");
       } else if (data.climax_result === "bad" && lastClimaxState !== "bad") {
