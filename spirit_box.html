@@ -202,7 +202,7 @@
       object-fit: cover;
     }
 
-    /* MODAL DE CHAVE DE API (CONFIGURAÇÃO INICIAL NO CELULAR) */
+    /* MODAL DE CHAVE DE API (CONFIGURAÇÃO NO SMARTPHONE) */
     #apiModal {
       position: fixed;
       inset: 0;
@@ -338,9 +338,10 @@
     let isBusyGlobally = false;
     let currentHate = 30;
     let currentTotem = "tv";
+    let isTestMode = false;
     let isHunting = false;
 
-    // Helper para arquivos de mídia
+    // Helper para caminhos com espaços
     function getMediaPath(filename) {
       return encodeURI("media/" + filename);
     }
@@ -400,9 +401,10 @@
 
       if (data.hate !== undefined) currentHate = data.hate;
       if (data.totem) currentTotem = data.totem;
+      if (data.test_mode !== undefined) isTestMode = data.test_mode;
       isHunting = (data.status === "hunting");
 
-      // Pane durante Caçada: Spirit Box entra em estática mas pode ser usado para banimento
+      // Comportamento durante Caçada
       if (isHunting) {
         sweepStatus.textContent = "⚠️ SIGNAL COLLAPSE // HUNT IN PROGRESS";
         sweepStatus.style.color = "var(--red)";
@@ -435,7 +437,6 @@
     });
 
     function playMicrophonyPenalty() {
-      // Reproduz Quick Hiss como microfonia e adiciona +5% Hate
       sfxAudio.src = getMediaPath("Quick Hiss 1.mp3");
       sfxAudio.play().catch(e => console.log(e));
       
@@ -506,7 +507,25 @@
       // 1. Aciona a Trava Global de 15 segundos no Firebase
       startGlobalCooldown();
 
-      // 2. Monta o Prompt de Sistema com Estado Dinâmico
+      // 2. DETECÇÃO DINÂMICA DO TOTEM (CASA VS ESCOLA)
+      let totemDescription = currentTotem;
+      if (isTestMode) {
+        if (currentTotem === "fan") totemDescription = "beside the spinning desk fan in your room";
+        else if (currentTotem === "chair") totemDescription = "sitting in the dark blue chair in the room";
+        else if (currentTotem === "tv") totemDescription = "trapped inside the living room television screen";
+        else if (currentTotem === "table") totemDescription = "lurking over the glass table";
+        else if (currentTotem === "tree") totemDescription = "watching from behind the Christmas tree";
+      } else {
+        if (currentTotem === "tv") totemDescription = "inside the central Samsung DeX TV screen of Room Montreal";
+        else if (currentTotem === "skull") totemDescription = "hovering over the red-eyed skull at the desk";
+        else if (currentTotem === "wifi") totemDescription = "draining electricity from the white Wi-Fi router on the wall";
+        else if (currentTotem === "mannequin") totemDescription = "standing near the headless striped mannequin";
+        else if (currentTotem === "mummy") totemDescription = "lurking near the white mummy corpse by the window";
+        else if (currentTotem === "spider") totemDescription = "attached to the giant black spider web";
+        else if (currentTotem === "outside") totemDescription = "glaring through the school's glass entrance doors";
+      }
+
+      // 3. MONTA O PROMPT DE SISTEMA COM ESTADO DINÂMICO
       const systemInstruction = `You are Ireena Limestone, a malevolent, corrupted bio-mutant ghost bound to the Uptime school (Room Montreal).
 You were a patient at Innseye Asylum (Patient #130). You transformed completely due to the glowing green substance.
 You are filled with hatred, jealousy, and arrogance. You murdered Ellie out of pure spite and jealousy towards Vincent Hazan.
@@ -519,7 +538,7 @@ CRITICAL INSTRUCTIONS:
 4. Always speak in English.
 
 KNOWLEDGE BASE:
-- Location / Current Anchor: You are currently haunting: [${currentTotem}].
+- Location / Current Anchor: You are currently haunting: [${totemDescription}].
 - Ellie: You despise her ("that little brat"). You suffocated and infected her. You will never admit remorse.
 - Vincent Hazan: He belongs to you. You mutilated him, yet his soul still flickers in the school's wires.
 - The Substance: The emerald poison that granted you true form and took away your human eyes.
@@ -565,11 +584,11 @@ You MUST output strictly a valid JSON object without markdown formatting, code f
         const resData = await response.json();
         const parsed = JSON.parse(resData.candidates[0].content.parts[0].text);
 
-        // 3. Aplica o Hate Delta no Firebase
+        // 4. Aplica o Hate Delta no Firebase
         let newHate = Math.max(0, Math.min(100, currentHate + (parsed.hate_delta || 0)));
         sessionRef.update({ hate: newHate });
 
-        // 4. Checagem de Triggers Especiais de Cutscene
+        // 5. Triggers Especiais de Cutscene
         if (parsed.special_action === "ELLIE_REVELATION") {
           entityResponseText.textContent = `"${parsed.spoken_text}"`;
           speakIreenaVoice(parsed.spoken_text);
@@ -588,7 +607,7 @@ You MUST output strictly a valid JSON object without markdown formatting, code f
           return;
         }
 
-        // 5. Dado de 30% de Chance de Resposta Sonora
+        // 6. Dado de 30% de Chance de Resposta Sonora
         const roll30 = Math.random() <= 0.30;
         if (roll30) {
           entityResponseText.textContent = `"${parsed.spoken_text}"`;
@@ -614,8 +633,8 @@ You MUST output strictly a valid JSON object without markdown formatting, code f
 
       const utter = new SpeechSynthesisUtterance(text);
       utter.lang = 'en-US';
-      utter.pitch = 0.55; // Tom grave e distorcido
-      utter.rate = 0.85;  // Fala lenta e ameaçadora
+      utter.pitch = 0.55;
+      utter.rate = 0.85;
 
       const voices = window.speechSynthesis.getVoices();
       const sinisterVoice = voices.find(v => v.lang.includes('en') && (v.name.includes('Female') || v.name.includes('Google') || v.name.includes('Samantha')));
@@ -651,7 +670,6 @@ You MUST output strictly a valid JSON object without markdown formatting, code f
       mobileJumpscareVideo.currentTime = 0;
       mobileJumpscareVideo.play().catch(e => console.log(e));
 
-      // Vibração no celular
       if (navigator.vibrate) navigator.vibrate([200, 100, 300, 100, 400]);
 
       mobileJumpscareVideo.onended = () => {
