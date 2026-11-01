@@ -74,7 +74,6 @@
       z-index: 15;
     }
 
-    /* TELA DE REVELAÇÃO ESPECTRAL (ENQUANTO O INPAINTING NANO BANANA RODA) */
     #developingOverlay {
       position: absolute;
       inset: 0;
@@ -345,9 +344,9 @@
     const mobileJumpscareVideo = document.getElementById('mobileJumpscareVideo');
 
     let geminiApiKey = "";
-    let geminiModel = "gemini-2.5-flash";
+    let geminiModel = "gemini-3.8-flash";
     let geminiImageModel = "gemini-2.5-flash-image";
-    let cameraEngine = "inpaint"; // "inpaint" (prioridade IA) ou "canvas" (fallback manual)
+    let cameraEngine = "inpaint";
     let isGameOn = true;
     let isApiLocked = false;
     let filmCount = 10;
@@ -396,7 +395,10 @@
         geminiApiKey = "";
       }
 
-      if (data.gemini_model) geminiModel = data.gemini_model;
+      // Ignora automaticamente o modelo antigo descontinuado
+      if (data.gemini_model && data.gemini_model !== "gemini-2.5-flash") {
+        geminiModel = data.gemini_model;
+      }
       if (data.gemini_image_model) geminiImageModel = data.gemini_image_model;
       if (data.camera_engine) cameraEngine = data.camera_engine;
       if (data.hate !== undefined) currentHate = data.hate;
@@ -447,7 +449,6 @@
       const newHate = Math.min(100, currentHate + 5);
       sessionRef.update({ hate: newHate });
 
-      // Redimensiona a captura para max 800px para deixar o Inpainting rápido e leve
       const rawW = videoFeed.videoWidth || 640;
       const rawH = videoFeed.videoHeight || 480;
       const scale = Math.min(1, 800 / Math.max(rawW, rawH));
@@ -470,8 +471,14 @@
       setTimeout(() => { shutterFlash.style.opacity = "0"; }, 90);
     }
 
-    // 1. GATEKEEPER RÁPIDO (GEMINI FLASH)
-    async function runVisualGatekeeper(imageBase64) {
+    // Extrai automaticamente o modelo sugerido caso o Google retorne mensagem de atualização de modelo
+    function extractSuggestedModel(errMsg) {
+      if (!errMsg) return null;
+      const match = errMsg.match(/gemini-[0-9.]+-[a-z0-9-]+/i);
+      return match ? match[0] : null;
+    }
+
+    async function runVisualGatekeeper(imageBase64, isRetry = false) {
       const schoolTargetsPrompt = `Analyze the image for paranormal investigation targets in Room Montreal:
 - "skull": Human skull or prop on a desk/table.
 - "wifi": Wall-mounted Wi-Fi router or electronic networking box.
@@ -494,7 +501,7 @@ ${isTestMode ? homeTargetsPrompt : schoolTargetsPrompt}
 Strictly output a valid JSON object without markdown:
 {
   "target": "skull" | "wifi" | "tv" | "mannequin" | "mummy" | "spider" | "tubes" | "fan" | "chair" | "table" | "tree" | "none",
-  "confidence": <0.0 to 1.0>
+  "confidence": 0.0 to 1.0
 }`;
 
       try {
@@ -514,7 +521,14 @@ Strictly output a valid JSON object without markdown:
 
         const resData = await response.json();
         if (!response.ok) {
-          throw new Error(resData.error?.message || `HTTP ${response.status}`);
+          const msg = resData.error?.message || `HTTP ${response.status}`;
+          const suggested = extractSuggestedModel(msg);
+          if (!isRetry && suggested && suggested !== geminiModel) {
+            geminiModel = suggested;
+            sessionRef.update({ gemini_model: suggested });
+            return await runVisualGatekeeper(imageBase64, true);
+          }
+          throw new Error(msg);
         }
 
         const rawText = resData.candidates[0].content.parts[0].text;
@@ -527,7 +541,6 @@ Strictly output a valid JSON object without markdown:
       }
     }
 
-    // 2. ROTEAMENTO DOS TOTENS E CHAMADA DE INPAINTING
     async function handleDetectionOutcome(target, confidence, sceneBase64) {
       if (!target || target === "none" || confidence < 0.55) {
         displayStaticFailure("NO ANOMALY OR FORENSIC TRACE DETECTED");
@@ -541,14 +554,12 @@ Strictly output a valid JSON object without markdown:
         else if (target === "fan") mappedTarget = "tv";
       }
 
-      // Tubos de ensaio são sempre evidência forense pura (+40 SVI)
       if (mappedTarget === "tubes") {
         playForensicReport("Totem_tubes.wav", "FORENSIC LOG: CHEMICAL SAMPLES ACCUMULATED (40)", "SVI: +40");
         freezeView(captureCanvas.toDataURL());
         return;
       }
 
-      // A) ELLIE (Caveira / Cadeira em Casa) -> SEM GHOST ORBS!
       if (mappedTarget === "skull") {
         const elliePrompt = `Image 1 is the real room photograph taken by the student. Image 2 is the character reference for the female ghost entity (Ellie). Edit Image 1 to naturally inpaint and integrate the exact female entity from Image 2 into the room near the skull/desk or sitting on the chair. Preserve the original room walls, furniture, framing, and lighting geometry of Image 1. Give her glowing green eyes, semi-translucent spectral blending, and natural shadows. CRITICAL: Keep the air around her completely clear of any floating light specks or bokeh spheres.`;
 
@@ -558,7 +569,6 @@ Strictly output a valid JSON object without markdown:
         return;
       }
 
-      // B) VINCENT (Roteador Wi-Fi / TV em Casa) -> COM GHOST ORBS (BOKEH SPECKS) + TRAVA ÚNICA
       if (mappedTarget === "wifi") {
         if (vincentDone) {
           statusBanner.textContent = "RESIDUAL ESSENCE PURGED // ALREADY RECORDED";
@@ -577,7 +587,6 @@ Strictly output a valid JSON object without markdown:
         return;
       }
 
-      // C) IREENA (Se o objeto fotografado for o Totem Ativo atual da Ireena!) -> COM GHOST ORBS (BOKEH SPECKS)
       if (target === currentTotem || mappedTarget === currentTotem) {
         let poseInstruction = "manifesting naturally inside the room near the central screen/totem, glaring forward with hollow dark eyes";
         if (target === "mannequin") {
@@ -596,7 +605,6 @@ Strictly output a valid JSON object without markdown:
         return;
       }
 
-      // D) Se fotografou Manequim, Múmia ou Aranha quando a Ireena NÃO está lá -> Toca o Laudo Forense do Totem
       if (mappedTarget === "mannequin") {
         playForensicReport("Totem_mannequin.wav", "FORENSIC LOG: VINCENT'S FORMER WIFE CLOTHES", "SVI: N/A");
         freezeView(captureCanvas.toDataURL());
@@ -616,18 +624,14 @@ Strictly output a valid JSON object without markdown:
       displayStaticFailure(`ENTITY DISPERSED // CURRENTLY HAUNTING: ${currentTotem.toUpperCase()}`);
     }
 
-    // 3. SELETOR DE MOTOR: INPAINTING IA (PRIORIDADE) vs CANVAS (FALLBACK MANUAL)
     async function renderEntityWithSelectedEngine(sceneBase64, ghostImageSrc, hasGhostOrb, inpaintPrompt, onComplete) {
       if (cameraEngine === "canvas") {
-        // Só usa Canvas se o Mestre tiver ativado o Fallback Manual no Master App
         generateGhostCompositeCanvas(ghostImageSrc, hasGhostOrb, onComplete);
       } else {
-        // Prioridade Total: Nano Banana / Gemini Flash Image Inpainting
         await generateGhostInpaintAI(sceneBase64, ghostImageSrc, inpaintPrompt, onComplete);
       }
     }
 
-    // Converte a imagem de referência local (media/Ellie.jpg, etc.) para Base64
     function loadReferenceImageBase64(src) {
       return new Promise((resolve, reject) => {
         const img = new Image();
@@ -647,7 +651,6 @@ Strictly output a valid JSON object without markdown:
       });
     }
 
-    // 4. MOTOR PRINCIPAL: INPAINTING REAL VIA NANO BANANA (gemini-2.5-flash-image)
     async function generateGhostInpaintAI(sceneBase64, ghostImageSrc, inpaintPrompt, onComplete) {
       developingOverlay.style.display = "flex";
       statusBanner.textContent = "NANO BANANA INPAINTING // MANIFESTING ENTITY...";
@@ -700,7 +703,6 @@ Strictly output a valid JSON object without markdown:
       }
     }
 
-    // 5. MOTOR FALLBACK MANUAL: CANVAS OVERLAY (SÓ RODA SE ATIVADO NO MASTER APP)
     function generateGhostCompositeCanvas(ghostImageSrc, hasGhostOrb, onComplete) {
       compositeCanvas.width = captureCanvas.width;
       compositeCanvas.height = captureCanvas.height;
