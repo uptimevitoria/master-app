@@ -34,7 +34,6 @@
       position: relative;
     }
 
-    /* CRT OVERLAY */
     .crt-overlay {
       position: fixed;
       inset: 0;
@@ -45,7 +44,6 @@
       z-index: 500;
     }
 
-    /* VISOR DA CÂMERA & OVERLAYS */
     #viewportContainer {
       position: absolute;
       inset: 0;
@@ -76,7 +74,6 @@
       z-index: 15;
     }
 
-    /* HUD DE MIRA E PARÂMETROS */
     .hud-frame {
       position: absolute;
       inset: 16px;
@@ -117,7 +114,6 @@
     .crosshair-center::before { top: 19px; left: 0; width: 40px; height: 2px; }
     .crosshair-center::after { top: 0; left: 19px; width: 2px; height: 40px; }
 
-    /* CABEÇALHO SUPERIOR */
     .hud-top {
       display: flex;
       justify-content: space-between;
@@ -134,22 +130,21 @@
       font-weight: bold;
     }
 
-    /* STATUS DE LEITURA INFERIOR */
     .hud-bottom {
       display: flex;
       flex-direction: column;
       gap: 6px;
       text-shadow: 0 0 5px rgba(0,0,0,0.8);
+      margin-bottom: 90px;
     }
     .status-banner {
-      background: rgba(0, 0, 0, 0.7);
+      background: rgba(0, 0, 0, 0.75);
       border-left: 3px solid var(--green);
       padding: 6px 10px;
       font-size: 0.75rem;
       letter-spacing: 1px;
     }
 
-    /* BARRA DE CONTROLES INFERIOR */
     .control-bar {
       position: absolute;
       bottom: 24px;
@@ -190,18 +185,18 @@
     }
 
     #btnResetVisor {
-      background: rgba(15, 23, 42, 0.8);
-      border: 1px solid #475569;
-      color: #94a3b8;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid var(--green);
+      color: var(--green);
       font-family: var(--font-mono);
-      font-size: 0.75rem;
-      padding: 10px 14px;
+      font-size: 0.78rem;
+      font-weight: bold;
+      padding: 12px 16px;
       border-radius: 6px;
       cursor: pointer;
       display: none;
     }
 
-    /* FLASH DE DISPARO */
     #shutterFlash {
       position: fixed;
       inset: 0;
@@ -212,44 +207,6 @@
       transition: opacity 0.08s ease-out;
     }
 
-    /* MODAL DE CHAVE DA API GEMINI */
-    #apiModal {
-      position: fixed;
-      inset: 0;
-      background: rgba(3, 5, 4, 0.95);
-      z-index: 9000;
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      text-align: center;
-      gap: 14px;
-    }
-    #apiModal input {
-      width: 100%;
-      max-width: 320px;
-      background: #0f172a;
-      border: 1px solid var(--green);
-      color: #fff;
-      padding: 12px;
-      border-radius: 4px;
-      font-family: var(--font-mono);
-      font-size: 0.85rem;
-      outline: none;
-    }
-    #apiModal button {
-      background: #064e3b;
-      border: 1px solid var(--green);
-      color: #a7f3d0;
-      padding: 10px 20px;
-      font-family: var(--font-mono);
-      font-weight: bold;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-
-    /* FULLSCREEN JUMPSCARE CONTAINER */
     #mobileJumpscareLayer {
       position: fixed;
       inset: 0;
@@ -271,7 +228,6 @@
   <div class="crt-overlay"></div>
   <div id="shutterFlash"></div>
 
-  <!-- VISOR DA CÂMERA -->
   <div id="viewportContainer">
     <video id="videoFeed" autoplay playsinline muted></video>
     <img id="capturedImageDisplay" alt="Exposed Plate">
@@ -279,7 +235,6 @@
     <canvas id="compositeCanvas"></canvas>
   </div>
 
-  <!-- HUD SPECTRAL -->
   <div class="hud-frame">
     <div class="reticle-corner c-tl"></div>
     <div class="reticle-corner c-tr"></div>
@@ -304,7 +259,6 @@
     </div>
   </div>
 
-  <!-- CONTROLES -->
   <div class="control-bar">
     <button id="btnResetVisor" onclick="resetVisor()">↺ NEW EXPOSURE</button>
     <button id="shutterBtn" onclick="takeSpectralShot()">
@@ -312,27 +266,14 @@
     </button>
   </div>
 
-  <!-- MODAL DE API KEY -->
-  <div id="apiModal">
-    <div style="color: var(--green); font-size: 1.1rem; font-weight: bold;">[ GEMINI API KEY REQUIRED ]</div>
-    <p style="font-size: 0.75rem; color: #94a3b8; max-width: 320px;">
-      Insert Google Gemini API Key to enable visual forensic detection.
-    </p>
-    <input type="password" id="apiKeyInput" placeholder="AIzaSy...">
-    <button onclick="saveApiKey()">ACTIVATE LENS</button>
-  </div>
-
-  <!-- JUMPSCARE LAYER -->
   <div id="mobileJumpscareLayer">
     <video id="mobileJumpscareVideo" playsinline></video>
   </div>
 
-  <!-- PLAYERS DE ÁUDIO -->
   <audio id="sfxAudio" preload="auto"></audio>
   <audio id="forensicAudio" preload="auto"></audio>
 
   <script>
-    // 1. CREDENCIAIS OFICIAIS DO FIREBASE DO USUÁRIO
     const firebaseConfig = {
       apiKey: "AIzaSyAk-aZpWPXD0za40kDF7kwL9ej3EfaYy6E",
       authDomain: "uptime-halloween-2026.firebaseapp.com",
@@ -348,7 +289,6 @@
     const db = firebase.database();
     const sessionRef = db.ref('montreal_session');
 
-    // 2. ELEMENTOS DO DOM & ESTADO
     const videoFeed = document.getElementById('videoFeed');
     const captureCanvas = document.getElementById('captureCanvas');
     const compositeCanvas = document.getElementById('compositeCanvas');
@@ -364,34 +304,21 @@
     const forensicAudio = document.getElementById('forensicAudio');
     const mobileJumpscareLayer = document.getElementById('mobileJumpscareLayer');
     const mobileJumpscareVideo = document.getElementById('mobileJumpscareVideo');
-    const apiModal = document.getElementById('apiModal');
 
     let geminiApiKey = localStorage.getItem('GEMINI_API_KEY') || "";
+    let geminiModel = "gemini-2.5-flash";
     let filmCount = 10;
     let currentHate = 30;
     let currentTotem = "tv";
     let isTestMode = false;
     let vincentDone = false;
+    let lastMobileEventTimestamp = 0;
+    let lastReloadTimestamp = 0;
 
-    // Helper de caminhos com espaços
     function getMediaPath(filename) {
       return encodeURI("media/" + filename);
     }
 
-    // Validação da API Key
-    if (!geminiApiKey) {
-      apiModal.style.display = "flex";
-    }
-    function saveApiKey() {
-      const key = document.getElementById('apiKeyInput').value.trim();
-      if (key) {
-        localStorage.setItem('GEMINI_API_KEY', key);
-        geminiApiKey = key;
-        apiModal.style.display = "none";
-      }
-    }
-
-    // 3. INICIALIZAÇÃO DA CÂMERA DO CELULAR (TRASEIRA)
     async function startCamera() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -400,18 +327,18 @@
         });
         videoFeed.srcObject = stream;
       } catch (err) {
-        console.error("Camera Access Error:", err);
         statusBanner.textContent = "CAMERA ERROR: CHECK HTTPS PERMISSIONS";
         statusBanner.style.borderLeftColor = "var(--red)";
       }
     }
     startCamera();
 
-    // 4. SINCRONIZAÇÃO EM TEMPO REAL COM FIREBASE
     sessionRef.on('value', snap => {
       const data = snap.val();
       if (!data) return;
 
+      if (data.gemini_key) geminiApiKey = data.gemini_key;
+      if (data.gemini_model) geminiModel = data.gemini_model;
       if (data.hate !== undefined) currentHate = data.hate;
       if (data.totem) currentTotem = data.totem;
       if (data.vincent_done !== undefined) vincentDone = data.vincent_done;
@@ -422,16 +349,25 @@
         envIndicator.style.color = isTestMode ? "var(--amber)" : "#94a3b8";
       }
 
-      // Escuta para Jumpscare Individual Mobile
-      if (data.mobile_event && data.mobile_event.active) {
+      if (data.camera_reload_timestamp && data.camera_reload_timestamp !== lastReloadTimestamp) {
+        lastReloadTimestamp = data.camera_reload_timestamp;
+        filmCount = 10;
+        plateCounterDisplay.textContent = `PLATES: 10 / 10`;
+      }
+
+      if (data.mobile_event && data.mobile_event.active && data.mobile_event.timestamp !== lastMobileEventTimestamp) {
+        lastMobileEventTimestamp = data.mobile_event.timestamp;
         triggerMobileJumpscare(data.mobile_event.video);
       }
     });
 
-    // 5. DISPARO ESPECTRAL (EXPOSIÇÃO DE CHAPA)
+    function cleanJsonString(str) {
+      return str.replace(/```json/gi, '').replace(/```/g, '').trim();
+    }
+
     async function takeSpectralShot() {
       if (filmCount <= 0) {
-        statusBanner.textContent = "PLATES DEPLETED // RELOAD REQUIRED";
+        statusBanner.textContent = "PLATES DEPLETED // AWAIT MASTER RELOAD";
         statusBanner.style.borderLeftColor = "var(--red)";
         playSfx("Quick Grunt.mp3");
         return;
@@ -441,27 +377,22 @@
       filmCount--;
       plateCounterDisplay.textContent = `PLATES: ${filmCount} / 10`;
 
-      // Flash visual e áudio de obturador
       triggerFlash();
       playSfx("Quick Hiss 1.mp3");
 
-      // Penalidade de +5% de Hate a cada foto tirada
       const newHate = Math.min(100, currentHate + 5);
       sessionRef.update({ hate: newHate });
 
-      // Captura o frame atual em alta resolução
       captureCanvas.width = videoFeed.videoWidth || 640;
       captureCanvas.height = videoFeed.videoHeight || 480;
       const ctx = captureCanvas.getContext('2d');
       ctx.drawImage(videoFeed, 0, 0, captureCanvas.width, captureCanvas.height);
 
-      // Redimensiona para no máximo 1024px para envio rápido à API
-      const base64Data = captureCanvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+      const base64Data = captureCanvas.toDataURL('image/jpeg', 0.8).split(',')[1];
 
       statusBanner.textContent = "EXPOSING PLATE // RUNNING SPECTRAL ANALYSIS...";
       statusBanner.style.borderLeftColor = "var(--amber)";
 
-      // Chama o Gatekeeper Visual (Gemini Flash)
       await runVisualGatekeeper(base64Data);
     }
 
@@ -470,7 +401,6 @@
       setTimeout(() => { shutterFlash.style.opacity = "0"; }, 90);
     }
 
-    // 6. GATEKEEPER VISUAL VIA GEMINI FLASH
     async function runVisualGatekeeper(imageBase64) {
       const schoolTargetsPrompt = `Analyze the image for paranormal investigation targets in Room Montreal:
 - "skull": Human skull or prop on a desk/table.
@@ -491,14 +421,14 @@
       const promptText = `You are a forensic computer vision gatekeeper for an asylum escape room.
 ${isTestMode ? homeTargetsPrompt : schoolTargetsPrompt}
 
-Strictly output a valid JSON object without markdown or code fences:
+Strictly output a valid JSON object without markdown:
 {
   "target": "skull" | "wifi" | "tv" | "mannequin" | "mummy" | "spider" | "tubes" | "fan" | "chair" | "table" | "tree" | "none",
   "confidence": <0.0 to 1.0>
 }`;
 
       try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiApiKey}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -513,7 +443,8 @@ Strictly output a valid JSON object without markdown or code fences:
         });
 
         const resData = await response.json();
-        const parsed = JSON.parse(resData.candidates[0].content.parts[0].text);
+        const rawText = resData.candidates[0].content.parts[0].text;
+        const parsed = JSON.parse(cleanJsonString(rawText));
         handleDetectionOutcome(parsed.target, parsed.confidence);
 
       } catch (err) {
@@ -522,24 +453,18 @@ Strictly output a valid JSON object without markdown or code fences:
       }
     }
 
-    // 7. TRATAMENTO DE RESULTADOS: FORENSE VS FANTASMAS
     function handleDetectionOutcome(target, confidence) {
-      console.log(`Gatekeeper Target: ${target} (Confidence: ${confidence})`);
-
-      // 1. NADA DETECTADO
       if (!target || target === "none" || confidence < 0.55) {
         displayStaticFailure("NO ANOMALY OR FORENSIC TRACE DETECTED");
         return;
       }
 
-      // 2. MODO TESTE (MAPEAMENTO CASA)
       if (isTestMode) {
-        if (target === "chair") target = "skull";       // Ellie
-        else if (target === "tv") target = "wifi";      // Vincent
-        else if (target === "fan") target = "tv";       // Ireena Idle
+        if (target === "chair") target = "skull";
+        else if (target === "tv") target = "wifi";
+        else if (target === "fan") target = "tv";
       }
 
-      // 3. EVIDÊNCIAS FORENSES PURAS (LAUDOS EM ÁUDIO DOS TOTENS)
       if (target === "mannequin") {
         playForensicReport("Totem_mannequin.wav", "FORENSIC LOG: VINCENT'S FORMER WIFE CLOTHES", "SVI: N/A");
         freezeView(captureCanvas.toDataURL());
@@ -561,9 +486,7 @@ Strictly output a valid JSON object without markdown or code fences:
         return;
       }
 
-      // 4. ENTIDADES ESPECTRAIS (COMPOSIÇÃO DE FANTASMA + GHOST ORBS)
-
-      // A) ELLIE (Caveira / Mesa Montreal) -> SEM GHOST ORBS!
+      // ELLIE (SEM GHOST ORBS!)
       if (target === "skull") {
         generateGhostComposite("media/Ellie.jpg", false, () => {
           playForensicReport("Totem_skull.wav", "ENTITY DETECTED: ELLIE HAZAN (BANSHEE)", "SVI: 50 SHARP");
@@ -571,7 +494,7 @@ Strictly output a valid JSON object without markdown or code fences:
         return;
       }
 
-      // B) VINCENT (Roteador Wi-Fi) -> COM GHOST ORB + TRAVA ÚNICA
+      // VINCENT (COM GHOST ORB + TRAVA ÚNICA)
       if (target === "wifi") {
         if (vincentDone) {
           statusBanner.textContent = "RESIDUAL ESSENCE PURGED // ALREADY RECORDED";
@@ -588,7 +511,7 @@ Strictly output a valid JSON object without markdown or code fences:
         return;
       }
 
-      // C) IREENA (TV ou Totem de Wander Ativo) -> COM GHOST ORB
+      // IREENA (COM GHOST ORB)
       if (target === "tv" || target === currentTotem) {
         generateGhostComposite("media/Ireena.jpg", true, () => {
           playForensicReport("Totem_tv.wav", "PRIMARY THREAT CONFIRMED: IREENA (CHANGELING)", "SVI: 137");
@@ -596,29 +519,23 @@ Strictly output a valid JSON object without markdown or code fences:
         return;
       }
 
-      // Totem fotografado mas Ireena já vagou para outro lugar
       displayStaticFailure(`ENTITY DISPERSED // CURRENTLY HAUNTING: ${currentTotem.toUpperCase()}`);
     }
 
-    // 8. MOTOR DE COMPOSIÇÃO ESPECTRAL (CANVAS + BLENDING + GHOST ORBS)
     function generateGhostComposite(ghostImageSrc, hasGhostOrb, onComplete) {
       compositeCanvas.width = captureCanvas.width;
       compositeCanvas.height = captureCanvas.height;
       const cCtx = compositeCanvas.getContext('2d');
 
-      // Desenha a foto real capturada da sala como base
       cCtx.drawImage(captureCanvas, 0, 0);
 
       const ghostImg = new Image();
       ghostImg.src = ghostImageSrc;
       ghostImg.onload = () => {
         cCtx.save();
-
-        // Modo de fusão espectral cinematográfico
         cCtx.globalAlpha = 0.78;
         cCtx.globalCompositeOperation = "screen";
 
-        // Centraliza a entidade em plano médio/fundo
         const gWidth = compositeCanvas.width * 0.65;
         const gHeight = (ghostImg.height / ghostImg.width) * gWidth;
         const gX = (compositeCanvas.width - gWidth) / 2;
@@ -627,12 +544,10 @@ Strictly output a valid JSON object without markdown or code fences:
         cCtx.drawImage(ghostImg, gX, gY, gWidth, gHeight);
         cCtx.restore();
 
-        // GHOST ORB PROCEDURAL (Apenas para Ireena e Vincent!)
         if (hasGhostOrb) {
           drawGhostOrb(cCtx, gX + (gWidth * 0.25), gY + (gHeight * 0.35));
         }
 
-        // Granulação analógica de filme para selar a fusão
         applyFilmGrain(cCtx, compositeCanvas.width, compositeCanvas.height);
 
         freezeView(compositeCanvas.toDataURL('image/jpeg', 0.9));
@@ -643,7 +558,6 @@ Strictly output a valid JSON object without markdown or code fences:
       };
     }
 
-    // Desenha a esfera de luz translúcida (Ghost Orb)
     function drawGhostOrb(ctx, x, y) {
       ctx.save();
       const radius = 18;
@@ -660,7 +574,6 @@ Strictly output a valid JSON object without markdown or code fences:
       ctx.restore();
     }
 
-    // Granulação ISO de sensor analógico
     function applyFilmGrain(ctx, width, height) {
       const imgData = ctx.getImageData(0, 0, width, height);
       const data = imgData.data;
@@ -673,7 +586,6 @@ Strictly output a valid JSON object without markdown or code fences:
       ctx.putImageData(imgData, 0, 0);
     }
 
-    // 9. FEEDBACKS VISUAIS & REPRODUÇÃO FORENSE
     function freezeView(imageSrc) {
       capturedImageDisplay.src = imageSrc;
       capturedImageDisplay.style.display = "block";
@@ -712,7 +624,6 @@ Strictly output a valid JSON object without markdown or code fences:
       sfxAudio.play().catch(e => console.log(e));
     }
 
-    // 10. JUMPSCARE RECEIVER
     function triggerMobileJumpscare(videoFile) {
       mobileJumpscareVideo.src = getMediaPath(videoFile);
       mobileJumpscareLayer.style.display = "flex";
