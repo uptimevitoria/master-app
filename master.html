@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MONTREAL WARD // MASTER OVERRIDE PANEL</title>
+  
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <style>
+    :root {
+      --bg: #090c10;
+      --panel: #121820;
+      --border: #222e3d;
+      --accent-green: #10b981;
+      --accent-red: #ef4444;
+      --accent-amber: #f59e0b;
+      --accent-cyan: #06b6d4;
+      --text: #f1f5f9;
+      --text-dim: #94a3b8;
+      --font-mono: 'Courier New', Courier, monospace;
+      --font-ui: system-ui, -apple-system, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-ui);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    header {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    h1 {
+      font-family: var(--font-mono);
+      font-size: 1.15rem;
+      letter-spacing: 2px;
+      color: var(--accent-green);
+    }
+
+    .badge {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+    .badge-online { background: rgba(16, 185, 129, 0.15); color: var(--accent-green); border: 1px solid var(--accent-green); }
+    .badge-hunting { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); border: 1px solid var(--accent-red); animation: pulse 1s infinite; }
+
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .card h2 {
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      color: var(--accent-cyan);
+      letter-spacing: 1px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .telemetry-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+    }
+    .telemetry-val {
+      font-family: var(--font-mono);
+      font-size: 1.2rem;
+      font-weight: bold;
+    }
+
+    .slider-box {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent-red);
+      cursor: pointer;
+    }
+
+    .btn-group {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+      gap: 8px;
+    }
+    button {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      font-weight: bold;
+      padding: 10px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    button:hover { background: #334155; }
+    button:active { transform: scale(0.97); }
+
+    .btn-red { background: #7f1d1d; border-color: var(--accent-red); color: #fecaca; }
+    .btn-red:hover { background: #991b1b; }
+    .btn-green { background: #064e3b; border-color: var(--accent-green); color: #a7f3d0; }
+    .btn-green:hover { background: #047857; }
+    .btn-amber { background: #78350f; border-color: var(--accent-amber); color: #fde68a; }
+    .btn-amber:hover { background: #92400e; }
+
+    select {
+      background: #090c10;
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--font-mono);
+      padding: 10px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      outline: none;
+    }
+
+    #consoleLog {
+      background: #040608;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: #38bdf8;
+      height: 140px;
+      overflow-y: auto;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div>
+      <h1>CONTROL TERMINAL // MONTREAL WARD</h1>
+      <p style="font-size: 0.75rem; color: var(--text-dim); margin-top: 2px;">PROCEDURAL HORROR ORCHESTRATOR</p>
+    </div>
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <span class="badge badge-online" id="statusBadge">STATUS: IDLE</span>
+      <button class="btn-amber" id="btnToggleEngine">ENGINE: ATIVA</button>
+    </div>
+  </header>
+
+  <div class="grid">
+
+    <!-- CARD 1: MEDIDOR DE HATE & CAÇADA -->
+    <div class="card">
+      <h2>🔥 TELEMETRIA DO HATE <span id="hateDisplay" class="telemetry-val">30%</span></h2>
+      
+      <div class="slider-box">
+        <input type="range" id="hateSlider" min="0" max="100" value="30">
+        <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-dim);">
+          <span>0% (Calmo)</span>
+          <span>40% (Sarcasmo)</span>
+          <span>80% (Risco Hunt)</span>
+          <span>100% (Morte)</span>
+        </div>
+      </div>
+
+      <div class="btn-group">
+        <button onclick="adjustHate(-10)">-10%</button>
+        <button onclick="adjustHate(-5)">-5%</button>
+        <button onclick="adjustHate(+5)">+5%</button>
+        <button onclick="adjustHate(+10)">+10%</button>
+        <button onclick="setHate(80)" class="btn-amber">80%</button>
+        <button onclick="setHate(100)" class="btn-red">100%</button>
+      </div>
+
+      <div style="border-top: 1px solid var(--border); padding-top: 10px;">
+        <div class="telemetry-row" style="margin-bottom: 8px;">
+          <span>Próxima Checagem (PG):</span>
+          <span id="pgTimerDisplay" style="font-family: var(--font-mono); color: var(--accent-cyan);">Calculando...</span>
+        </div>
+        <div class="telemetry-row">
+          <span>Chance de Caçada Atual:</span>
+          <span id="huntChanceDisplay" style="font-family: var(--font-mono); color: var(--accent-red);">0%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD 2: COMANDOS DE CAÇADA E CLÍMAX -->
+    <div class="card">
+      <h2>💀 PROTOCOLOS DE CRISE</h2>
+      
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <button class="btn-red" style="padding: 14px; font-size: 0.9rem;" onclick="triggerHuntManual()">
+          🚨 FORÇAR CAÇADA AGORA (1 MIN)
+        </button>
+        <button class="btn-green" style="padding: 12px;" onclick="triggerShieldWin()">
+          🛡️ VITÓRIA DO SHIELD (Derruba Hate & Glitch)
+        </button>
+        <button class="btn-amber" onclick="cancelHuntEmergency()">
+          ⏹️ ABORTAR CAÇADA MANUALMENTE
+        </button>
+      </div>
+
+      <div style="border-top: 1px solid var(--border); padding-top: 10px;">
+        <label style="font-size: 0.75rem; color: var(--text-dim); display: block; margin-bottom: 6px;">CLÍMAX FINAL (CRONÔMETRO DE 5 MIN):</label>
+        <div class="btn-group">
+          <button class="btn-amber" onclick="startClimaxCountdown()">INICIAR 5MIN</button>
+          <button class="btn-green" onclick="setClimaxResult('good')">GOOD END</button>
+          <button class="btn-red" onclick="setClimaxResult('bad')">BAD END</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD 3: TOTEM ATIVO & DISPAROS ESPECIAIS -->
+    <div class="card">
+      <h2>📍 ANCORAGEM & CUTSCENES</h2>
+      
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <label style="font-size: 0.75rem; color: var(--text-dim);">TOTEM ATUAL DA IREENA:</label>
+        <select id="totemSelect" onchange="changeTotem(this.value)">
+          <option value="tv">TV (Sala Montreal - Central)</option>
+          <option value="skull">Caveira (Ellie - Mesa)</option>
+          <option value="wifi">Roteador Wi-Fi (Vincent)</option>
+          <option value="mannequin">Manequim (Vestidos)</option>
+          <option value="mummy">Múmia (Ponto Secundário)</option>
+          <option value="spider">Aranha Mutante</option>
+          <option value="outside">Portas de Vidro (Wander)</option>
+        </select>
+      </div>
+
+      <div style="border-top: 1px solid var(--border); padding-top: 10px; display: flex; flex-direction: column; gap: 8px;">
+        <label style="font-size: 0.75rem; color: var(--text-dim);">CUTSCENES DIEGÉTICAS NA TV:</label>
+        <button class="btn-cyan" onclick="triggerCutscene('Ellie-Revelation.mp4')">🎬 REVELAÇÃO DA ELLIE (Spirit Box)</button>
+        <button class="btn-cyan" onclick="triggerCutscene('Vincent-Glitch.mp4')">⚡ GLITCH DO VINCENT (Pós-Hunt)</button>
+      </div>
+    </div>
+
+    <!-- CARD 4: DISPARADOR MANUAL DE SUSTOS -->
+    <div class="card">
+      <h2>👁️ DISPAROS DIRETOS (TESTES)</h2>
+      
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <label style="font-size: 0.75rem; color: var(--text-dim);">JUMPSCARE MOBILE (ALUNOS):</label>
+        <select id="mobileVideoSelect">
+          <option value="Vertical-Jumpscare 6 - BEST.mp4">Jumpscare 6 - BEST (I'm in your phone)</option>
+          <option value="Vertical-Jumpscare 7 - BEST.mp4">Jumpscare 7 - BEST (Glass Crack)</option>
+          <option value="Vertical-Jumpscare3.mp4">Jumpscare 3 (Raios Verdes)</option>
+          <option value="Vertical-Jumpscare1.mp4">Jumpscare 1 (I see you)</option>
+          <option value="Vertical-Jumpscare2.mp4">Jumpscare 2 (Susto Rápido)</option>
+          <option value="Vertical-Jumpscare4.mp4">Jumpscare 4 (Maldição)</option>
+          <option value="Vertical-Jumpscare5.mp4">Jumpscare 5 (Whisper)</option>
+          <option value="Whisper with jumpscare.mp4">Whisper with jumpscare</option>
+          <option value="Lurking 1.mp4">Lurking 1 (Sombra)</option>
+        </select>
+        <button onclick="fireMobileEventManual()">📱 ENVIAR SUSTO MOBILE</button>
+
+        <label style="font-size: 0.75rem; color: var(--text-dim); margin-top: 6px;">EVENTO DE TV (SAMSUNG DEX):</label>
+        <select id="tvVideoSelect">
+          <option value="Sarcasm 1.mp4">Sarcasm 1 (Stupid people)</option>
+          <option value="Sarcasm 2.mp4">Sarcasm 2 (Begone students)</option>
+          <option value="Sarcasm 3.mp4">Sarcasm 3 (Vincent is mine)</option>
+          <option value="Threats in Odd Language.mp4">Threats in Odd Language</option>
+          <option value="Threats in Odd Language 2.mp4">Threats in Odd Language 2 (Raio)</option>
+          <option value="Laugh and Glass Breaking.mp4">Laugh & Glass Breaking</option>
+          <option value="Laugh and Jumpscare.mp4">Laugh & Jumpscare</option>
+          <option value="Jumpscare 1.mp4">Jumpscare 1</option>
+          <option value="Jumpscare 2.mp4">Jumpscare 2</option>
+          <option value="Lurking Hor 1.mp4">Lurking Hor 1</option>
+          <option value="Lurking Hor 2.mp4">Lurking Hor 2</option>
+          <option value="Normal Curse Odd Language.mp4">Normal Curse 1</option>
+          <option value="Normal Curse Odd Language 2.mp4">Normal Curse 2</option>
+          <option value="Normal Curse Odd Language 3.mp4">Normal Curse 3</option>
+        </select>
+        <button onclick="fireTvEventManual()">📺 EXIBIR EVENTO NA TV</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- CONSOLE LOG -->
+  <div class="card">
+    <h2>📜 REGISTRO OPERACIONAL EM TEMPO REAL</h2>
+    <div id="consoleLog"></div>
+  </div>
+
+  <script>
+    // CREDENCIAIS OFICIAIS DO USUÁRIO
+    const firebaseConfig = {
+      apiKey: "AIzaSyAk-aZpWPXD0za40kDF7kwL9ej3EfaYy6E",
+      authDomain: "uptime-halloween-2026.firebaseapp.com",
+      databaseURL: "https://uptime-halloween-2026-default-rtdb.firebaseio.com",
+      projectId: "uptime-halloween-2026",
+      storageBucket: "uptime-halloween-2026.firebasestorage.app",
+      messagingSenderId: "1020945901960",
+      appId: "1:1020945901960:web:5040ae103b7dc347c9723d",
+      measurementId: "G-8MPM67BSLB"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const sessionRef = db.ref('montreal_session');
+
+    // Estado Local
+    let currentHate = 30;
+    let engineActive = true;
+    let nextCheckSeconds = 300;
+    let gracePeriod = false;
+    let huntingActive = false;
+
+    // Baralhos de Vídeo sem Repetição Imediata
+    const mobileDeckPriority = ["Vertical-Jumpscare 6 - BEST.mp4", "Vertical-Jumpscare 7 - BEST.mp4"];
+    const mobileDeckRemaining = ["Vertical-Jumpscare3.mp4", "Vertical-Jumpscare1.mp4", "Vertical-Jumpscare2.mp4", "Vertical-Jumpscare4.mp4", "Vertical-Jumpscare5.mp4", "Whisper with jumpscare.mp4"];
+    let currentMobileDeck = [...mobileDeckPriority, ...mobileDeckRemaining];
+
+    const tvLowDeck = ["Lurking Hor 1.mp4", "Lurking Hor 2.mp4"];
+    const tvMidDeck = ["Sarcasm 1.mp4", "Sarcasm 2.mp4", "Sarcasm 3.mp4", "Normal Curse Odd Language.mp4", "Normal Curse Odd Language 2.mp4", "Normal Curse Odd Language 3.mp4"];
+    const tvHighDeck = ["Threats in Odd Language.mp4", "Threats in Odd Language 2.mp4", "Laugh and Glass Breaking.mp4", "Laugh and Jumpscare.mp4", "Jumpscare 1.mp4", "Jumpscare 2.mp4"];
+
+    function logMsg(msg) {
+      const log = document.getElementById('consoleLog');
+      const time = new Date().toLocaleTimeString();
+      log.innerHTML = `<div>[${time}] ${msg}</div>` + log.innerHTML;
+    }
+
+    // Inicialização do Banco
+    sessionRef.update({
+      initialized: true,
+      totem: "tv",
+      spirit_box_cooldown: false
+    });
+
+    // Ouvinte em Tempo Real
+    sessionRef.on('value', snap => {
+      const val = snap.val();
+      if (!val) return;
+
+      if (val.hate !== undefined && val.hate !== currentHate) {
+        currentHate = val.hate;
+        document.getElementById('hateSlider').value = currentHate;
+        document.getElementById('hateDisplay').textContent = currentHate + '%';
+        updateTelemetryCalculations();
+      }
+
+      if (val.totem) {
+        document.getElementById('totemSelect').value = val.totem;
+      }
+
+      huntingActive = (val.status === 'hunting');
+      const badge = document.getElementById('statusBadge');
+      if (huntingActive) {
+        badge.className = "badge badge-hunting";
+        badge.textContent = "STATUS: HUNTING ACTIVE!";
+      } else {
+        badge.className = "badge badge-online";
+        badge.textContent = `STATUS: ${val.status ? val.status.toUpperCase() : 'IDLE'}`;
+      }
+    });
+
+    // Controles de Hate
+    const hateSlider = document.getElementById('hateSlider');
+    hateSlider.addEventListener('input', (e) => {
+      setHate(parseInt(e.target.value));
+    });
+
+    function setHate(val) {
+      val = Math.max(0, Math.min(100, val));
+      currentHate = val;
+      sessionRef.update({ hate: currentHate });
+      logMsg(`Hate ajustado para: ${currentHate}%`);
+      updateTelemetryCalculations();
+    }
+
+    function adjustHate(delta) {
+      setHate(currentHate + delta);
+    }
+
+    function changeTotem(totem) {
+      sessionRef.update({ totem: totem });
+      logMsg(`Totem ativo mudou para: ${totem}`);
+    }
+
+    // Cálculos da PG e Chances
+    function updateTelemetryCalculations() {
+      // PG contínua: de 300s (5min) a 60s (1min) no 99%
+      nextCheckSeconds = Math.round(300 * Math.pow(0.2, currentHate / 100));
+      document.getElementById('pgTimerDisplay').textContent = `${nextCheckSeconds}s`;
+
+      // Chance de Caçada (80% a 100%)
+      let huntChance = 0;
+      if (currentHate >= 100) huntChance = 100;
+      else if (currentHate >= 95) huntChance = 85;
+      else if (currentHate >= 90) huntChance = 70;
+      else if (currentHate >= 85) huntChance = 50;
+      else if (currentHate >= 80) huntChance = 30;
+
+      document.getElementById('huntChanceDisplay').textContent = `${huntChance}%`;
+    }
+
+    // Loop Procedural (Executa a cada segundo para controlar o relógio)
+    let proceduralTicker = setInterval(() => {
+      if (!engineActive || gracePeriod || huntingActive) return;
+
+      nextCheckSeconds--;
+      document.getElementById('pgTimerDisplay').textContent = `${nextCheckSeconds}s`;
+
+      if (nextCheckSeconds <= 0) {
+        runProceduralRoll();
+        updateTelemetryCalculations();
+      }
+    }, 1000);
+
+    function runProceduralRoll() {
+      logMsg(`🎲 Rolando dados procedurais com Hate em ${currentHate}%...`);
+
+      // 1. Checagem de Caçada (Se Hate >= 80%)
+      if (currentHate >= 80) {
+        let huntChance = 0;
+        if (currentHate >= 100) huntChance = 1.0;
+        else if (currentHate >= 95) huntChance = 0.85;
+        else if (currentHate >= 90) huntChance = 0.70;
+        else if (currentHate >= 85) huntChance = 0.50;
+        else if (currentHate >= 80) huntChance = 0.30;
+
+        if (Math.random() <= huntChance) {
+          logMsg(`🚨 DADO DE CAÇADA ATIVADO (${Math.round(huntChance * 100)}% chance)!`);
+          triggerHuntManual();
+          return;
+        }
+      }
+
+      // 2. Checagem de Ghost Event (Se não caçou)
+      let eventChance = 0.40;
+      if (currentHate >= 70) eventChance = 0.70; // Exatamente os seus 70% no topo
+      else if (currentHate >= 40) eventChance = 0.55;
+
+      if (Math.random() <= eventChance) {
+        logMsg(`👻 Ghost Event procedural aprovado! Sorteando mídia...`);
+        // Alterna entre susto Mobile e susto de TV
+        if (Math.random() < 0.5) {
+          fireNextMobileDeck();
+        } else {
+          fireNextTvDeck();
+        }
+      } else {
+        logMsg(`🍃 Silêncio atmosférico mantido (Dado falhou de propósito).`);
+        // Toca apenas som atmosférico sutil
+        sessionRef.update({
+          ambient_sfx: currentHate >= 50 ? "Hissing 1.mp3" : "Whispers 1.mp3",
+          sfx_trigger: Date.now()
+        });
+      }
+    }
+
+    // Sorteio de Baralho Mobile Sem Repetição
+    function fireNextMobileDeck() {
+      if (currentMobileDeck.length === 0) {
+        currentMobileDeck = [...mobileDeckPriority, ...mobileDeckRemaining];
+      }
+      const video = currentMobileDeck.shift();
+      sessionRef.update({
+        mobile_event: {
+          active: true,
+          video: video,
+          timestamp: Date.now()
+        }
+      });
+      logMsg(`📱 Disparado Mobile Event: ${video}`);
+    }
+
+    // Sorteio de Baralho TV por Faixa de Hate
+    function fireNextTvDeck() {
+      let pool = tvLowDeck;
+      if (currentHate >= 70) pool = tvHighDeck;
+      else if (currentHate >= 40) pool = tvMidDeck;
+
+      const video = pool[Math.floor(Math.random() * pool.length)];
+      sessionRef.update({
+        tv_event: {
+          active: true,
+          video: video,
+          timestamp: Date.now()
+        }
+      });
+      logMsg(`📺 Disparado TV Event: ${video}`);
+    }
+
+    // Disparos Manuais
+    function fireMobileEventManual() {
+      const video = document.getElementById('mobileVideoSelect').value;
+      sessionRef.update({
+        mobile_event: {
+          active: true,
+          video: video,
+          timestamp: Date.now()
+        }
+      });
+      logMsg(`📱 Disparo Manual Mobile: ${video}`);
+    }
+
+    function fireTvEventManual() {
+      const video = document.getElementById('tvVideoSelect').value;
+      sessionRef.update({
+        tv_event: {
+          active: true,
+          video: video,
+          timestamp: Date.now()
+        }
+      });
+      logMsg(`📺 Disparo Manual TV: ${video}`);
+    }
+
+    function triggerCutscene(videoName) {
+      sessionRef.update({
+        tv_event: {
+          active: true,
+          video: videoName,
+          timestamp: Date.now()
+        }
+      });
+      logMsg(`🎬 Cutscene executada na TV: ${videoName}`);
+    }
+
+    // Mecânica de Caçada
+    function triggerHuntManual() {
+      huntingActive = true;
+      sessionRef.update({
+        status: "hunting",
+        hunt_timestamp: Date.now()
+      });
+      logMsg(`🚨 CAÇADA INICIADA (Música + Loops de 1 minuto)`);
+
+      // Timer de 60 segundos de Caçada
+      setTimeout(() => {
+        if (huntingActive) {
+          logMsg(`⌛ Caçada completou 1 minuto sem defesa. Aplicando castigo.`);
+          cancelHuntEmergency();
+        }
+      }, 60000);
+    }
+
+    function triggerShieldWin() {
+      huntingActive = false;
+      gracePeriod = true;
+      setHate(40); // Baixa Hate pós-escudo
+
+      // Dispara o Glitch do Vincent imediatamente na TV
+      sessionRef.update({
+        status: "vincent_glitch",
+        tv_event: {
+          active: true,
+          video: "Vincent-Glitch.mp4",
+          timestamp: Date.now()
+        }
+      });
+      logMsg(`🛡️ GHOST SHIELD DEFECT: Vincent assumiu a TV! Hate derrubado para 40%.`);
+
+      // 2 minutos de calmaria garantida (Grace Period)
+      setTimeout(() => {
+        gracePeriod = false;
+        logMsg(`🍃 Período de graça pós-caçada encerrado.`);
+      }, 120000);
+    }
+
+    function cancelHuntEmergency() {
+      huntingActive = false;
+      sessionRef.update({ status: "idle" });
+      logMsg(`⏹️ Caçada encerrada.`);
+    }
+
+    // Clímax Final
+    function startClimaxCountdown() {
+      sessionRef.update({
+        countdown_active: true,
+        countdown_seconds: 300,
+        climax_timestamp: Date.now()
+      });
+      logMsg(`⏱️ Clímax Final de 5 minutos iniciado na TV!`);
+    }
+
+    function setClimaxResult(res) {
+      sessionRef.update({
+        climax_result: res,
+        countdown_active: false
+      });
+      logMsg(`🏁 Fim de Jogo declarado: ${res.toUpperCase()}`);
+    }
+
+    // Botão Liga/Desliga Engine
+    document.getElementById('btnToggleEngine').addEventListener('click', function() {
+      engineActive = !engineActive;
+      this.textContent = engineActive ? "ENGINE: ATIVA" : "ENGINE: PAUSADA";
+      this.className = engineActive ? "btn-amber" : "btn-red";
+      logMsg(engineActive ? "Engine procedural ativada." : "Engine pausada pelo Game Master.");
+    });
+
+    updateTelemetryCalculations();
+  </script>
+</body>
+</html>
