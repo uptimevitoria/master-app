@@ -221,12 +221,11 @@
           <button class="btn-green" onclick="syncApiKeyToFirebase()" style="min-width: 90px;">SALVAR</button>
         </div>
         <div style="display: flex; gap: 6px; margin-top: 2px;">
-          <input type="text" id="masterModelInput" value="gemini-2.5-flash" title="Modelo Gatekeeper (Visão/Voz)">
+          <input type="text" id="masterModelInput" value="gemini-3.8-flash" title="Modelo Gatekeeper (Visão/Voz)">
           <input type="text" id="masterImageModelInput" value="gemini-2.5-flash-image" title="Modelo Inpainting (Nano Banana)">
         </div>
       </div>
 
-      <!-- SELETOR MANUAL DE MOTOR DA CÂMERA (PRIORIDADE INPAINT IA vs FALLBACK CANVAS) -->
       <div style="display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--border); padding-top: 8px;">
         <label style="font-size: 0.7rem; color: var(--text-dim);">MOTOR DE GERAÇÃO DE FANTASMAS (CONTROLE MANUAL):</label>
         <button class="btn-green" id="btnCameraEngine" onclick="toggleCameraEngine()">
@@ -237,9 +236,9 @@
       <div class="health-status-box">
         <div id="hcPower">⚡ Chave Geral do Jogo: VERIFICANDO...</div>
         <div id="hcApi">🤖 Status da Chave API: VERIFICANDO...</div>
-        <div id="hcEngine">🎨 Motor da Câmera: INPAINT IA (gemini-2.5-flash-image)</div>
+        <div id="hcEngine">🎨 Motor da Câmera: INPAINT IA</div>
         <div id="hcFirebase">🌐 Firebase Realtime: AGUARDANDO TESTE</div>
-        <div id="hcTv">📺 Samsung DeX TV: AGUARDANDO TESTE</div>
+        <div id="hcTv">📺 Monitor Central TV: AGUARDANDO TESTE</div>
         <div id="hcTotem">📍 Totem Ativo: Sincronizando...</div>
       </div>
 
@@ -327,7 +326,7 @@
       </div>
 
       <div style="border-top: 1px solid var(--border); padding-top: 10px; display: flex; flex-direction: column; gap: 8px;">
-        <label style="font-size: 0.72rem; color: var(--text-dim);">CUTSCENES ESPECIAIS NA TV DEX:</label>
+        <label style="font-size: 0.72rem; color: var(--text-dim);">CUTSCENES ESPECIAIS NA TV CENTRAL:</label>
         <button class="btn-cyan" onclick="triggerCutscene('Ellie-Revelation.mp4')">🎬 REVELAÇÃO DA ELLIE (Spirit Box)</button>
         <button class="btn-cyan" onclick="triggerCutscene('Vincent-Glitch.mp4')">⚡ GLITCH DO VINCENT (Pós-Hunt)</button>
         <button class="btn-green" onclick="triggerCutscene('END-COMPLETE.mp4')">🕊️ LIBERTAÇÃO DA ELLIE (END-COMPLETE.mp4)</button>
@@ -353,7 +352,7 @@
         </select>
         <button onclick="fireMobileEventManual()">📱 ENVIAR SUSTO MOBILE</button>
 
-        <label style="font-size: 0.72rem; color: var(--text-dim); margin-top: 4px;">EVENTO DE TV (SAMSUNG DEX):</label>
+        <label style="font-size: 0.72rem; color: var(--text-dim); margin-top: 4px;">EVENTO DE TV (MONITOR CENTRAL):</label>
         <select id="tvVideoSelect">
           <option value="Sarcasm 1.mp4">Sarcasm 1 (Stupid people)</option>
           <option value="Sarcasm 2.mp4">Sarcasm 2 (Begone students)</option>
@@ -400,7 +399,7 @@
 
     let isGameOn = true;
     let isApiLocked = false;
-    let cameraEngine = "inpaint"; // "inpaint" (Nano Banana IA) ou "canvas" (Fallback Manual)
+    let cameraEngine = "inpaint";
     let currentHate = 30;
     let isTestMode = false;
     let isProceduralMode = true;
@@ -442,15 +441,24 @@
       log.innerHTML = `<div>[${time}] ${msg}</div>` + log.innerHTML;
     }
 
-    // Carrega a chave salva localmente no navegador do Mestre
     const localSavedKey = localStorage.getItem('GEMINI_API_KEY');
     if (localSavedKey) {
       document.getElementById('masterApiKeyInput').value = localSavedKey;
     }
 
-    // ===============================================================
-    // 1. CHAVE GERAL ON / OFF (ESTACA ZERO + PROTEÇÃO DE CHAVE)
-    // ===============================================================
+    // Monitora a presença em tempo real da TV continuamente
+    db.ref('montreal_session/tv_status').on('value', snap => {
+      const tvData = snap.val();
+      const hcTv = document.getElementById('hcTv');
+      if (tvData && tvData.online) {
+        const audioMsg = tvData.audio_unlocked ? "ÁUDIO DESTRAVADO" : "FALTA CLICAR NA TELA DA TV";
+        const color = tvData.audio_unlocked ? "var(--accent-green)" : "var(--accent-amber)";
+        hcTv.innerHTML = `📺 Monitor Central TV: <span style="color: ${color}">ONLINE (${audioMsg})</span>`;
+      } else {
+        hcTv.innerHTML = `📺 Monitor Central TV: <span style="color: var(--accent-red)">OFFLINE / FECHADA</span>`;
+      }
+    });
+
     function toggleMasterPower() {
       isGameOn = !isGameOn;
       huntingActive = false;
@@ -475,7 +483,6 @@
         camera_reload_timestamp: Date.now()
       };
 
-      // Se desligar o jogo (OFF), bloqueia a chave nos celulares automaticamente
       if (!isGameOn) {
         isApiLocked = true;
         payload.api_locked = true;
@@ -492,9 +499,9 @@
       updateTelemetryCalculations();
 
       if (isGameOn) {
-        logMsg("⚡ JOGO LIGADO (ON): Parâmetros limpos e chave API liberada para os aparelhos!");
+        logMsg("⚡ JOGO LIGADO (ON): Parâmetros limpos e chave API liberada!");
       } else {
-        logMsg("🛑 JOGO DESLIGADO (OFF): Estaca Zero ativada e chave API recolhida/travada.");
+        logMsg("🛑 JOGO DESLIGADO (OFF): Estaca Zero ativada e chave API recolhida.");
       }
     }
 
@@ -512,9 +519,6 @@
       }
     }
 
-    // ===============================================================
-    // 2. BOTÃO DE TRAVA DA CHAVE API ("BOTÃO QUE NINGUÉM MEXE")
-    // ===============================================================
     function toggleApiLock() {
       isApiLocked = !isApiLocked;
       const savedKey = document.getElementById('masterApiKeyInput').value.trim() || localStorage.getItem('GEMINI_API_KEY') || "";
@@ -524,7 +528,7 @@
           api_locked: true,
           gemini_key: "LOCKED_BY_MASTER"
         });
-        logMsg("🔒 API TRAVADA PELO MESTRE: Nenhum celular de aluno pode consumir créditos agora.");
+        logMsg("🔒 API TRAVADA PELO MESTRE: Nenhum celular pode consumir créditos agora.");
       } else {
         if (!savedKey) {
           isApiLocked = true;
@@ -552,16 +556,13 @@
       }
     }
 
-    // ===============================================================
-    // 3. SELETOR MANUAL DE MOTOR: INPAINT IA vs FALLBACK CANVAS
-    // ===============================================================
     function toggleCameraEngine() {
       cameraEngine = (cameraEngine === "inpaint") ? "canvas" : "inpaint";
       sessionRef.update({ camera_engine: cameraEngine });
       updateCameraEngineUI();
       logMsg(cameraEngine === "inpaint"
-        ? "✨ Motor da Câmera definido para: INPAINT IA (Nano Banana / gemini-2.5-flash-image)"
-        : "🖼️ Motor da Câmera alterado manualmente para: FALLBACK CANVAS (Overlay Local)");
+        ? "✨ Motor da Câmera definido para: INPAINT IA (Nano Banana)"
+        : "🖼️ Motor da Câmera alterado manualmente para: FALLBACK CANVAS");
     }
 
     function updateCameraEngineUI() {
@@ -580,7 +581,7 @@
 
     function syncApiKeyToFirebase() {
       const key = document.getElementById('masterApiKeyInput').value.trim().replace(/[\r\n\s]/g, '');
-      const model = document.getElementById('masterModelInput').value.trim() || "gemini-2.5-flash";
+      const model = document.getElementById('masterModelInput').value.trim() || "gemini-3.8-flash";
       const imageModel = document.getElementById('masterImageModelInput').value.trim() || "gemini-2.5-flash-image";
 
       if (!key || key === "LOCKED_BY_MASTER") return alert("Insira uma chave Gemini válida.");
@@ -595,7 +596,7 @@
         camera_engine: cameraEngine
       }).then(() => {
         updateApiLockUI();
-        logMsg(`🔑 Chave sincronizada! Gatekeeper: ${model} | Inpaint: ${imageModel}`);
+        logMsg(`🔑 Sincronizado! Gatekeeper: ${model} | Inpaint: ${imageModel}`);
       });
     }
 
@@ -678,10 +679,22 @@
         updateCameraEngineUI();
       }
 
+      // Substitui automaticamente o gemini-2.5-flash antigo caso ainda esteja salvo no banco
+      if (val.gemini_model === "gemini-2.5-flash") {
+        sessionRef.update({ gemini_model: "gemini-3.8-flash" });
+        document.getElementById('masterModelInput').value = "gemini-3.8-flash";
+      } else if (val.gemini_model) {
+        document.getElementById('masterModelInput').value = val.gemini_model;
+      }
+
+      if (val.gemini_image_model) {
+        document.getElementById('masterImageModelInput').value = val.gemini_image_model;
+      }
+
       if (val.gemini_key && val.gemini_key !== "LOCKED_BY_MASTER") {
         document.getElementById('masterApiKeyInput').value = val.gemini_key;
         localStorage.setItem('GEMINI_API_KEY', val.gemini_key);
-        document.getElementById('hcApi').innerHTML = `🤖 Status da Chave API: <span style="color: var(--accent-green)">ATIVA (${val.gemini_image_model || 'gemini-2.5-flash-image'})</span>`;
+        document.getElementById('hcApi').innerHTML = `🤖 Status da Chave API: <span style="color: var(--accent-green)">ATIVA (${val.gemini_model || 'gemini-3.8-flash'})</span>`;
       } else if (val.gemini_key === "LOCKED_BY_MASTER" || val.api_locked) {
         const localKey = localStorage.getItem('GEMINI_API_KEY');
         if (localKey) document.getElementById('masterApiKeyInput').value = localKey;
@@ -731,7 +744,7 @@
       }
     });
 
-    function runHealthCheck() {
+    async function runHealthCheck() {
       logMsg("🩺 Executando Diagnóstico Geral do Ecossistema...");
       const startPing = Date.now();
 
@@ -743,17 +756,23 @@
         document.getElementById('hcFirebase').innerHTML = `🌐 Firebase Realtime: <span style="color: var(--accent-red)">ERRO</span>`;
       });
 
-      db.ref('montreal_session/tv_status').once('value').then(snap => {
-        const tvData = snap.val();
-        if (tvData && tvData.last_ping && (Date.now() - tvData.last_ping < 12000)) {
-          const audioMsg = tvData.audio_unlocked ? "ÁUDIO DESTRAVADO" : "FALTA CLICAR NA TELA DA TV";
-          document.getElementById('hcTv').innerHTML = `📺 Samsung DeX TV: <span style="color: var(--accent-green)">ONLINE (${audioMsg})</span>`;
-          logMsg(`✅ TV Samsung DeX conectada (${audioMsg}).`);
-        } else {
-          document.getElementById('hcTv').innerHTML = `📺 Samsung DeX TV: <span style="color: var(--accent-amber)">OFFLINE / FECHADA</span>`;
-          logMsg("⚠️ TV Samsung DeX não detectada nos últimos 12s.");
+      // Lista no Log quais modelos Flash e Image estão ativos na sua chave do Google
+      const activeKey = document.getElementById('masterApiKeyInput').value.trim() || localStorage.getItem('GEMINI_API_KEY');
+      if (activeKey && activeKey !== "LOCKED_BY_MASTER") {
+        try {
+          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${activeKey}`);
+          const data = await res.json();
+          if (data.models) {
+            const names = data.models.map(m => m.name.replace('models/', ''));
+            const flashModels = names.filter(n => n.includes('flash'));
+            const imgModels = names.filter(n => n.includes('image') || n.includes('imagen'));
+            logMsg(`🤖 Modelos Flash na sua chave: ${flashModels.join(', ')}`);
+            logMsg(`🎨 Modelos de Imagem na sua chave: ${imgModels.join(', ')}`);
+          }
+        } catch (e) {
+          logMsg("⚠️ Não foi possível listar os modelos da chave.");
         }
-      });
+      }
     }
 
     document.getElementById('hateSlider').addEventListener('input', (e) => {
