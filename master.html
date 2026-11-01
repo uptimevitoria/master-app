@@ -66,7 +66,7 @@
     }
     .badge-online { background: rgba(16, 185, 129, 0.15); color: var(--accent-green); border: 1px solid var(--accent-green); }
     .badge-hunting { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); border: 1px solid var(--accent-red); animation: pulse 1s infinite; }
-    .badge-test { background: rgba(139, 92, 246, 0.2); color: var(--accent-purple); border: 1px solid var(--accent-purple); }
+    .badge-off { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid var(--accent-red); }
 
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 
@@ -159,6 +159,14 @@
     .btn-cyan { background: #0e7490; border-color: var(--accent-cyan); color: #cffafe; }
     .btn-cyan:hover { background: #155e75; }
 
+    /* Botão Destacado ON / OFF */
+    #btnMasterPower {
+      padding: 10px 16px;
+      font-size: 0.85rem;
+      letter-spacing: 1px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.5);
+    }
+
     #consoleLog {
       background: #040608;
       border: 1px solid var(--border);
@@ -190,10 +198,11 @@
   <header>
     <div>
       <h1>CONTROL TERMINAL // MONTREAL WARD</h1>
-      <p style="font-size: 0.75rem; color: var(--text-dim); margin-top: 2px;">PROCEDURAL & DIAGNOSTIC ORCHESTRATOR</p>
+      <p style="font-size: 0.75rem; color: var(--text-dim); margin-top: 2px;">MASTER POWER & PROCEDURAL ORCHESTRATOR</p>
     </div>
     <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
       <span class="badge badge-online" id="statusBadge">STATUS: IDLE</span>
+      <button class="btn-green" id="btnMasterPower" onclick="toggleMasterPower()">⚡ JOGO: ON (ATIVO)</button>
       <button class="btn-purple" id="btnEnvironment" onclick="toggleEnvironment()">AMBIENTE: ESCOLA (LIVE)</button>
       <button class="btn-amber" id="btnMode" onclick="toggleGameMode()">MODO: PROCEDURAL</button>
     </div>
@@ -215,6 +224,7 @@
       </div>
 
       <div class="health-status-box">
+        <div id="hcPower">⚡ Chave Geral do Jogo: VERIFICANDO...</div>
         <div id="hcFirebase">🌐 Firebase Realtime: AGUARDANDO TESTE</div>
         <div id="hcTv">📺 Samsung DeX TV: AGUARDANDO TESTE</div>
         <div id="hcApi">🤖 Chave Gemini no Banco: VERIFICANDO...</div>
@@ -228,7 +238,6 @@
       <div class="btn-group">
         <button onclick="reloadCameraPlates()" class="btn-green">🎞️ RECARREGAR 10 CHAPAS</button>
         <button onclick="clearSingleFlags()" class="btn-amber">🔓 LIBERAR TRAVAS</button>
-        <button onclick="resetGameSession()" class="btn-red">⚠️ HARD RESET</button>
       </div>
     </div>
 
@@ -377,6 +386,7 @@
     const db = firebase.database();
     const sessionRef = db.ref('montreal_session');
 
+    let isGameOn = true;
     let currentHate = 30;
     let isTestMode = false;
     let isProceduralMode = true;
@@ -418,7 +428,57 @@
       log.innerHTML = `<div>[${time}] ${msg}</div>` + log.innerHTML;
     }
 
-    // Sincroniza a API Key com todos os celulares via Firebase
+    // ===============================================================
+    // CHAVE GERAL ON / OFF (ESTACA ZERO AUTOMÁTICA)
+    // ===============================================================
+    function toggleMasterPower() {
+      isGameOn = !isGameOn;
+      huntingActive = false;
+      gracePeriod = false;
+      clearTimeout(huntTimerTimeout);
+
+      const defaultTotem = isTestMode ? "fan" : "tv";
+      currentHate = 30;
+
+      // Tanto ao desligar (OFF) quanto ao religar (ON), limpamos todos os resíduos de eventos anteriores!
+      sessionRef.update({
+        game_power: isGameOn ? "on" : "off",
+        hate: 30,
+        status: "idle",
+        totem: defaultTotem,
+        spirit_box_busy: false,
+        countdown_active: false,
+        climax_result: null,
+        vincent_done: false,
+        tv_event: { active: false, video: "", timestamp: 0 },
+        mobile_event: { active: false, video: "", timestamp: 0 },
+        camera_reload_timestamp: Date.now()
+      });
+
+      updatePowerButtonUI();
+      updateTelemetryCalculations();
+
+      if (isGameOn) {
+        logMsg("⚡ JOGO LIGADO (ON): Todos os parâmetros iniciados limpos da estaca zero!");
+      } else {
+        logMsg("🛑 JOGO DESLIGADO (OFF): Firebase limpo e todas as telas em espera (Estaca Zero).");
+      }
+    }
+
+    function updatePowerButtonUI() {
+      const btn = document.getElementById('btnMasterPower');
+      const hcPower = document.getElementById('hcPower');
+      if (isGameOn) {
+        btn.textContent = "⚡ JOGO: ON (ATIVO)";
+        btn.className = "btn-green";
+        hcPower.innerHTML = `⚡ Chave Geral do Jogo: <span style="color: var(--accent-green)">LIGADO (ON)</span>`;
+      } else {
+        btn.textContent = "🛑 JOGO: OFF (ESTACA ZERO)";
+        btn.className = "btn-red";
+        hcPower.innerHTML = `⚡ Chave Geral do Jogo: <span style="color: var(--accent-red)">DESLIGADO (ESTACA ZERO)</span>`;
+      }
+    }
+
     function syncApiKeyToFirebase() {
       const key = document.getElementById('masterApiKeyInput').value.trim().replace(/[\r\n\s]/g, '');
       const model = document.getElementById('masterModelInput').value.trim() || "gemini-2.5-flash";
@@ -428,12 +488,11 @@
         gemini_key: key,
         gemini_model: model
       }).then(() => {
-        logMsg(`🔑 Chave Gemini e modelo (${model}) sincronizados no Firebase para todos os aparelhos!`);
+        logMsg(`🔑 Chave Gemini e modelo (${model}) sincronizados no Firebase!`);
         document.getElementById('hcApi').innerHTML = `🤖 Chave Gemini no Banco: <span style="color: var(--accent-green)">ATIVA (${model})</span>`;
       });
     }
 
-    // Carrega chave local se já existir no computador do Mestre
     const localSavedKey = localStorage.getItem('GEMINI_API_KEY');
     if (localSavedKey) {
       document.getElementById('masterApiKeyInput').value = localSavedKey;
@@ -499,11 +558,14 @@
       }
     }
 
-    sessionRef.update({ initialized: true });
-
     sessionRef.on('value', snap => {
       const val = snap.val();
       if (!val) return;
+
+      if (val.game_power !== undefined) {
+        isGameOn = (val.game_power !== "off");
+        updatePowerButtonUI();
+      }
 
       if (val.gemini_key) {
         document.getElementById('masterApiKeyInput').value = val.gemini_key;
@@ -541,11 +603,14 @@
 
       huntingActive = (val.status === 'hunting');
       const badge = document.getElementById('statusBadge');
-      if (huntingActive) {
+      if (!isGameOn) {
+        badge.className = "badge badge-off";
+        badge.textContent = "STATUS: GAME OFF";
+      } else if (huntingActive) {
         badge.className = "badge badge-hunting";
         badge.textContent = "STATUS: HUNTING ACTIVE!";
       } else {
-        badge.className = isTestMode ? "badge badge-test" : "badge badge-online";
+        badge.className = "badge badge-online";
         badge.textContent = `STATUS: ${val.status ? val.status.toUpperCase() : 'IDLE'}`;
       }
     });
@@ -558,7 +623,7 @@
         const latency = Date.now() - startPing;
         document.getElementById('hcFirebase').innerHTML = `🌐 Firebase Realtime: <span style="color: var(--accent-green)">ONLINE (${latency}ms)</span>`;
         logMsg(`✅ Firebase RTDB conectado (${latency}ms).`);
-      }).catch(err => {
+      }).catch(() => {
         document.getElementById('hcFirebase').innerHTML = `🌐 Firebase Realtime: <span style="color: var(--accent-red)">ERRO</span>`;
       });
 
@@ -599,7 +664,7 @@
 
     function updateTelemetryCalculations() {
       nextCheckSeconds = Math.round(300 * Math.pow(0.2, currentHate / 100));
-      document.getElementById('pgTimerDisplay').textContent = `${nextCheckSeconds}s`;
+      document.getElementById('pgTimerDisplay').textContent = isGameOn ? `${nextCheckSeconds}s` : "PAUSADO (OFF)";
 
       let huntChance = 0;
       if (currentHate >= 100) huntChance = 100;
@@ -612,7 +677,7 @@
     }
 
     setInterval(() => {
-      if (!isProceduralMode || gracePeriod || huntingActive) return;
+      if (!isGameOn || !isProceduralMode || gracePeriod || huntingActive) return;
 
       nextCheckSeconds--;
       document.getElementById('pgTimerDisplay').textContent = `${nextCheckSeconds}s`;
@@ -771,36 +836,16 @@
     function clearSingleFlags() {
       sessionRef.update({
         vincent_done: false,
-        spirit_box_busy: false
-      });
-      logMsg("🔓 Travas do Roteador (Vincent) e Spirit Box liberadas.");
-    }
-
-    function resetGameSession() {
-      if (!confirm("Resetar toda a sessão da Sala Montreal para uma nova turma?")) return;
-      const savedKey = document.getElementById('masterApiKeyInput').value.trim();
-      const savedModel = document.getElementById('masterModelInput').value.trim() || "gemini-2.5-flash";
-      sessionRef.set({
-        initialized: true,
-        gemini_key: savedKey,
-        gemini_model: savedModel,
-        hate: 30,
-        status: "idle",
-        totem: isTestMode ? "fan" : "tv",
-        test_mode: isTestMode,
-        game_mode: isProceduralMode ? "procedural" : "normal",
         spirit_box_busy: false,
-        countdown_active: false,
-        vincent_done: false,
-        climax_result: null,
-        camera_reload_timestamp: Date.now()
+        climax_result: null
       });
-      logMsg("🔄 HARD RESET COMPLETO: Sala pronta para a próxima turma!");
+      logMsg("🔓 Travas do Roteador (Vincent), Spirit Box e Clímax liberadas.");
     }
 
     renderTotemDropdown();
     updateEnvButtonUI();
     updateModeButtonUI();
+    updatePowerButtonUI();
     updateTelemetryCalculations();
   </script>
 </body>
