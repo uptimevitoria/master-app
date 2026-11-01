@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MONTREAL WARD // SURVEILLANCE FEED</title>
+  
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <style>
+    :root {
+      --bg: #030504;
+      --green: #10b981;
+      --green-glow: rgba(16, 185, 129, 0.4);
+      --red: #ef4444;
+      --red-glow: rgba(239, 68, 68, 0.5);
+      --cyan: #38bdf8;
+      --font-mono: 'Courier New', Courier, monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    
+    body {
+      background: var(--bg);
+      color: #cbd5e1;
+      font-family: var(--font-mono);
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+    }
+
+    /* TELA DE AUTOPLAY (PRIMEIRO CLIQUE DIEGÉTICO) */
+    #unlockScreen {
+      position: fixed;
+      inset: 0;
+      background: #020403;
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    #unlockScreen h2 {
+      color: var(--green);
+      font-size: 1.4rem;
+      letter-spacing: 3px;
+      margin-bottom: 10px;
+    }
+    #unlockScreen p {
+      font-size: 0.85rem;
+      color: #64748b;
+    }
+
+    /* OVERLAY CRT / SCANLINES */
+    .crt-overlay {
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.35) 50%),
+                  linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+      background-size: 100% 4px, 6px 100%;
+      pointer-events: none;
+      z-index: 500;
+    }
+
+    /* CABEÇALHO DO MONITOR CCTV */
+    header {
+      padding: 24px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+    }
+    .feed-title {
+      font-size: 1.1rem;
+      letter-spacing: 3px;
+      color: var(--green);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .dot-rec {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--red);
+      box-shadow: 0 0 10px var(--red);
+      animation: blink 1.2s infinite;
+    }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
+
+    /* TELEMETRIA PARANORMAL CENTRAL */
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      gap: 20px;
+    }
+    .radar-box {
+      width: 280px;
+      height: 280px;
+      border-radius: 50%;
+      border: 2px dashed rgba(16, 185, 129, 0.3);
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 30px rgba(16, 185, 129, 0.05);
+    }
+    .radar-sweep {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: conic-gradient(from 0deg, rgba(16, 185, 129, 0.25) 0deg, transparent 60deg);
+      animation: sweep 4s linear infinite;
+    }
+    @keyframes sweep { 100% { transform: rotate(360deg); } }
+
+    .telemetry-readout {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .readout-line {
+      font-size: 0.95rem;
+      letter-spacing: 2px;
+      color: #94a3b8;
+    }
+    .readout-alert {
+      color: var(--red);
+      font-weight: bold;
+      letter-spacing: 3px;
+      text-shadow: 0 0 10px var(--red-glow);
+    }
+
+    /* RODAPÉ DIEGÉTICO */
+    footer {
+      padding: 20px 30px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: #64748b;
+      letter-spacing: 2px;
+      z-index: 10;
+    }
+
+    /* VÍDEO FULLSCREEN PLAYER (GHOST EVENTS & JUMPSCARES) */
+    #videoContainer {
+      position: fixed;
+      inset: 0;
+      background: #000;
+      z-index: 2000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    #tvVideo {
+      width: 100vw;
+      height: 100vh;
+      object-fit: cover;
+    }
+
+    /* ALERTA VISUAL DE CAÇADA */
+    #huntingOverlay {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at center, rgba(239, 68, 68, 0.3) 0%, rgba(0, 0, 0, 0.95) 100%);
+      z-index: 1500;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      animation: strobe 0.8s infinite alternate;
+    }
+    @keyframes strobe { 0% { opacity: 0.7; } 100% { opacity: 1; } }
+
+    .hunting-text {
+      color: var(--red);
+      font-size: clamp(2.5rem, 6vw, 4.5rem);
+      font-weight: bold;
+      letter-spacing: 8px;
+      text-shadow: 0 0 30px var(--red);
+      margin-bottom: 12px;
+    }
+    .hunting-sub {
+      color: #fff;
+      font-size: 1.2rem;
+      letter-spacing: 4px;
+    }
+
+    /* CRONÔMETRO DE CLÍMAX */
+    #climaxBox {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      z-index: 20;
+    }
+    #climaxTimer {
+      font-size: 4rem;
+      color: var(--red);
+      text-shadow: 0 0 20px var(--red);
+      letter-spacing: 6px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="crt-overlay"></div>
+
+  <!-- DESTRAVAMENTO DE ÁUDIO -->
+  <div id="unlockScreen" onclick="unlockSystemAudio()">
+    <h2>[ MONTREAL TERMINAL OFFLINE ]</h2>
+    <p>CLICK TO INITIALIZE DEX SURVEILLANCE & AUDIO DRIVERS</p>
+  </div>
+
+  <!-- CABEÇALHO -->
+  <header>
+    <div class="feed-title">
+      <div class="dot-rec"></div>
+      <span>CAMERA FEED 04 // MONTREAL WARD</span>
+    </div>
+    <div id="clockDisplay" style="color: var(--cyan); letter-spacing: 2px;">00:00:00</div>
+  </header>
+
+  <!-- CENTRO TELEMÉTRICO -->
+  <main id="mainTelemetry">
+    <div class="radar-box">
+      <div class="radar-sweep"></div>
+      <div style="font-size: 0.75rem; color: var(--green); letter-spacing: 1px;">SECTOR B2</div>
+    </div>
+
+    <div class="telemetry-readout">
+      <div class="readout-line" id="emkReading">ELECTROMAGNETIC FIELD: 1.2 mG (NORMAL)</div>
+      <div class="readout-line" id="viscosityReading">SPECTRAL VISCOSITY (SVI): 0.0</div>
+      <div class="readout-line" id="containmentStatus">CONTAINMENT MATRIX: STABLE</div>
+    </div>
+
+    <!-- CRONÔMETRO FINAL -->
+    <div id="climaxBox">
+      <div style="font-size: 1.1rem; color: #f59e0b; letter-spacing: 3px;">⚠️ CRITICAL PURGE PROTOCOL</div>
+      <div id="climaxTimer">05:00</div>
+    </div>
+  </main>
+
+  <!-- RODAPÉ -->
+  <footer>
+    <span>UPTIME ACADEMY // ASYLUM NETWORK</span>
+    <span id="activeTotemIndicator">ACTIVE TOTEM: TV SCREEN</span>
+  </footer>
+
+  <!-- TELA DE CAÇADA (FLASHING OVERLAY) -->
+  <div id="huntingOverlay">
+    <div class="hunting-text">ENTITY HUNTING</div>
+    <div class="hunting-sub">USE GHOST SHIELD NOW // HIDE IMMEDATELY</div>
+  </div>
+
+  <!-- PLAYER DE VÍDEO -->
+  <div id="videoContainer">
+    <video id="tvVideo" playsinline></video>
+  </div>
+
+  <!-- ÁUDIOS DIEGÉTICOS -->
+  <audio id="huntingMusic" preload="auto" loop></audio>
+  <audio id="sfxPlayer" preload="auto"></audio>
+
+  <script>
+    // CREDENCIAIS OFICIAIS DO USUÁRIO
+    const firebaseConfig = {
+      apiKey: "AIzaSyAk-aZpWPXD0za40kDF7kwL9ej3EfaYy6E",
+      authDomain: "uptime-halloween-2026.firebaseapp.com",
+      databaseURL: "https://uptime-halloween-2026-default-rtdb.firebaseio.com",
+      projectId: "uptime-halloween-2026",
+      storageBucket: "uptime-halloween-2026.firebasestorage.app",
+      messagingSenderId: "1020945901960",
+      appId: "1:1020945901960:web:5040ae103b7dc347c9723d",
+      measurementId: "G-8MPM67BSLB"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const sessionRef = db.ref('montreal_session');
+
+    // Elementos DOM
+    const unlockScreen = document.getElementById('unlockScreen');
+    const videoContainer = document.getElementById('videoContainer');
+    const tvVideo = document.getElementById('tvVideo');
+    const huntingOverlay = document.getElementById('huntingOverlay');
+    const huntingMusic = document.getElementById('huntingMusic');
+    const sfxPlayer = document.getElementById('sfxPlayer');
+    const activeTotemIndicator = document.getElementById('activeTotemIndicator');
+    const emkReading = document.getElementById('emkReading');
+    const containmentStatus = document.getElementById('containmentStatus');
+    const climaxBox = document.getElementById('climaxBox');
+    const climaxTimer = document.getElementById('climaxTimer');
+
+    let audioUnlocked = false;
+    let isHunting = false;
+    let huntIntervals = [];
+
+    // Helper para caminhos com espaços
+    function getMediaPath(filename) {
+      return encodeURI("media/" + filename);
+    }
+
+    // Configuração de Música de Caçada
+    huntingMusic.src = getMediaPath("Bran Hunting Song.mp3");
+
+    // Destravamento de Autoplay do Navegador
+    function unlockSystemAudio() {
+      audioUnlocked = true;
+      unlockScreen.style.display = "none";
+
+      // Teste mudo para desbloquear áudio no Chrome do DeX
+      huntingMusic.volume = 0;
+      huntingMusic.play().then(() => {
+        huntingMusic.pause();
+        huntingMusic.currentTime = 0;
+        huntingMusic.volume = 1.0;
+      }).catch(e => console.log(e));
+
+      // Relógio do HUD
+      setInterval(() => {
+        const d = new Date();
+        document.getElementById('clockDisplay').textContent = d.toLocaleTimeString();
+      }, 1000);
+    }
+
+    // ==========================================================
+    // ESCUTA EM TEMPO REAL DO FIREBASE
+    // ==========================================================
+    sessionRef.on('value', snap => {
+      const data = snap.val();
+      if (!data) return;
+
+      // 1. Atualização do Totem
+      if (data.totem) {
+        activeTotemIndicator.textContent = `ACTIVE TOTEM: ${data.totem.toUpperCase()}`;
+      }
+
+      // 2. Telemetria Reativa ao Hate
+      if (data.hate !== undefined) {
+        const h = data.hate;
+        emkReading.textContent = `ELECTROMAGNETIC FIELD: ${(1.2 + (h * 0.08)).toFixed(1)} mG`;
+        
+        if (h >= 80) {
+          containmentStatus.textContent = "CONTAINMENT MATRIX: CRITICAL FAILURE IMMINENT";
+          containmentStatus.className = "readout-line readout-alert";
+        } else if (h >= 40) {
+          containmentStatus.textContent = "CONTAINMENT MATRIX: AGITATED / ANOMALOUS";
+          containmentStatus.className = "readout-line";
+          containmentStatus.style.color = "var(--accent-amber)";
+        } else {
+          containmentStatus.textContent = "CONTAINMENT MATRIX: STABLE";
+          containmentStatus.className = "readout-line";
+          containmentStatus.style.color = "var(--green)";
+        }
+      }
+
+      // 3. Status de Caçada (Hunting)
+      if (data.status === "hunting" && !isHunting) {
+        startHuntingSequence();
+      } else if (data.status !== "hunting" && isHunting) {
+        stopHuntingSequence();
+      }
+
+      // 4. Ghost Events e Cutscenes na TV
+      if (data.tv_event && data.tv_event.active) {
+        playTvVideo(data.tv_event.video);
+      }
+
+      // 5. Sons Atmosféricos Rápidos (Hissing / Whispers)
+      if (data.sfx_trigger && data.ambient_sfx) {
+        playSfx(data.ambient_sfx);
+      }
+
+      // 6. Clímax de 5 Minutos
+      if (data.countdown_active) {
+        climaxBox.style.display = "flex";
+        runClimaxClock(data.climax_timestamp);
+      } else {
+        climaxBox.style.display = "none";
+      }
+
+      // 7. Resultado do Clímax
+      if (data.climax_result === "good") {
+        playTvVideo("Vincent-Glitch.mp4");
+      } else if (data.climax_result === "bad") {
+        playTvVideo("Laugh and Glass Breaking.mp4");
+      }
+    });
+
+    // ==========================================================
+    // MECÂNICA DE CAÇADA: ÁUDIO CONTÍNUO + VÍDEOS ESPORÁDICOS + DUCKING
+    // ==========================================================
+    function startHuntingSequence() {
+      isHunting = true;
+      huntingOverlay.style.display = "flex";
+
+      if (audioUnlocked) {
+        huntingMusic.currentTime = 0;
+        huntingMusic.volume = 1.0;
+        huntingMusic.play().catch(e => console.log(e));
+      }
+
+      // Agendamento esporádico dos loops da Ireena aos 10s e aos 35s
+      huntIntervals.push(setTimeout(() => {
+        if (isHunting) triggerHuntingVideoDuck("HUNTING LOOP 1.mp4");
+      }, 10000));
+
+      huntIntervals.push(setTimeout(() => {
+        if (isHunting) triggerHuntingVideoDuck("HUNTING LOOP 2.mp4");
+      }, 35000));
+    }
+
+    function triggerHuntingVideoDuck(videoFile) {
+      // Ducking: Abaixa a música de caçada para 35% durante o grito da Ireena
+      huntingMusic.volume = 0.35;
+      
+      tvVideo.src = getMediaPath(videoFile);
+      videoContainer.style.display = "flex";
+      tvVideo.play();
+
+      tvVideo.onended = () => {
+        videoContainer.style.display = "none";
+        // Restaura o volume para 100% após o fim do vídeo
+        if (isHunting) huntingMusic.volume = 1.0;
+      };
+    }
+
+    function stopHuntingSequence() {
+      isHunting = false;
+      huntingOverlay.style.display = "none";
+      huntingMusic.pause();
+      huntingMusic.currentTime = 0;
+      huntIntervals.forEach(t => clearTimeout(t));
+      huntIntervals = [];
+    }
+
+    // ==========================================================
+    // REPRODUÇÃO DE VÍDEO GERAL (GHOST EVENTS / CUTSCENES)
+    // ==========================================================
+    function playTvVideo(videoFile) {
+      tvVideo.src = getMediaPath(videoFile);
+      videoContainer.style.display = "flex";
+      tvVideo.currentTime = 0;
+      
+      tvVideo.play().catch(e => console.log(e));
+
+      tvVideo.onended = () => {
+        videoContainer.style.display = "none";
+        // Desativa a flag no Firebase para liberar a fila
+        sessionRef.child('tv_event').update({ active: false });
+      };
+    }
+
+    function playSfx(audioFile) {
+      if (!audioUnlocked) return;
+      sfxPlayer.src = getMediaPath(audioFile);
+      sfxPlayer.play().catch(e => console.log(e));
+    }
+
+    // Cronômetro do Clímax
+    function runClimaxClock(startTimestamp) {
+      const duration = 300; // 5 minutos
+      const interval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - startTimestamp) / 1000);
+        const remain = Math.max(0, duration - elapsed);
+
+        const m = Math.floor(remain / 60).toString().padStart(2, '0');
+        const s = (remain % 60).toString().padStart(2, '0');
+        climaxTimer.textContent = `${m}:${s}`;
+
+        if (remain <= 0) {
+          clearInterval(interval);
+          playTvVideo("Laugh and Glass Breaking.mp4");
+        }
+      }, 1000);
+    }
+  </script>
+</body>
+</html>
