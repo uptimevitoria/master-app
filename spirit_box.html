@@ -36,7 +36,6 @@
       position: relative;
     }
 
-    /* OVERLAY SCANLINES CRT */
     .crt-overlay {
       position: fixed;
       inset: 0;
@@ -47,7 +46,6 @@
       z-index: 500;
     }
 
-    /* HEADER */
     header {
       background: var(--panel);
       border: 1px solid #1e293b;
@@ -70,7 +68,6 @@
       text-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
     }
 
-    /* OSCILOSCÓPIO CENTRAL */
     .screen-housing {
       background: #020403;
       border: 2px solid #1e293b;
@@ -98,13 +95,12 @@
       letter-spacing: 1px;
     }
 
-    /* FEEDBACK DA FALA / TRANSCRIÇÃO */
     .transcript-box {
       background: var(--panel);
       border: 1px solid #1e293b;
       border-radius: 8px;
       padding: 12px;
-      height: 120px;
+      height: 130px;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
@@ -126,7 +122,6 @@
       font-style: italic;
     }
 
-    /* BOTÃO PUSH TO TALK */
     .controls {
       display: flex;
       flex-direction: column;
@@ -170,7 +165,6 @@
       cursor: not-allowed;
     }
 
-    /* TRAVA ANTI-SPAM (COOLDOWN) */
     #cooldownBarContainer {
       width: 100%;
       height: 6px;
@@ -186,7 +180,6 @@
       transition: width 0.1s linear;
     }
 
-    /* FULLSCREEN JUMPSCARE CONTAINER (MOBILE EVENT) */
     #mobileJumpscareLayer {
       position: fixed;
       inset: 0;
@@ -201,50 +194,12 @@
       height: 100vh;
       object-fit: cover;
     }
-
-    /* MODAL DE CHAVE DE API (CONFIGURAÇÃO NO SMARTPHONE) */
-    #apiModal {
-      position: fixed;
-      inset: 0;
-      background: rgba(3, 5, 4, 0.95);
-      z-index: 9000;
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      text-align: center;
-      gap: 14px;
-    }
-    #apiModal input {
-      width: 100%;
-      max-width: 320px;
-      background: #0f172a;
-      border: 1px solid var(--green);
-      color: #fff;
-      padding: 12px;
-      border-radius: 4px;
-      font-family: var(--font-mono);
-      font-size: 0.85rem;
-      outline: none;
-    }
-    #apiModal button {
-      background: #064e3b;
-      border: 1px solid var(--green);
-      color: #a7f3d0;
-      padding: 10px 20px;
-      font-family: var(--font-mono);
-      font-weight: bold;
-      border-radius: 4px;
-      cursor: pointer;
-    }
   </style>
 </head>
 <body>
 
   <div class="crt-overlay"></div>
 
-  <!-- CABEÇALHO -->
   <header>
     <div>
       <div class="device-title">SPIRIT BOX SB-7</div>
@@ -253,13 +208,11 @@
     <div class="freq-box" id="freqDisplay">87.5 MHz</div>
   </header>
 
-  <!-- OSCILOSCÓPIO CRT -->
   <div class="screen-housing">
     <canvas id="scopeCanvas"></canvas>
     <div class="status-overlay" id="sweepStatus">SWEEP: HIGH SPEED (100ms)</div>
   </div>
 
-  <!-- DISPLAY DE TRANSCRIÇÃO & RETORNO -->
   <div class="transcript-box">
     <div>
       <div class="transcript-label">STUDENT TRANSMISSION [ENGLISH ONLY]:</div>
@@ -271,7 +224,6 @@
     </div>
   </div>
 
-  <!-- CONTROLES & PUSH TO TALK -->
   <div class="controls">
     <div id="cooldownBarContainer">
       <div id="cooldownBar"></div>
@@ -286,26 +238,13 @@
     </div>
   </div>
 
-  <!-- CAMADA DE SUSTOS MOBILE (RECEBIDOS VIA FIREBASE) -->
   <div id="mobileJumpscareLayer">
     <video id="mobileJumpscareVideo" playsinline></video>
   </div>
 
-  <!-- MODAL DE API KEY -->
-  <div id="apiModal">
-    <div style="color: var(--green); font-size: 1.1rem; font-weight: bold;">[ GEMINI API KEY REQUIRED ]</div>
-    <p style="font-size: 0.75rem; color: #94a3b8; max-width: 320px;">
-      Insert Google Gemini API Key to enable Ireena's cognitive responses.
-    </p>
-    <input type="password" id="apiKeyInput" placeholder="AIzaSy...">
-    <button onclick="saveApiKey()">ACTIVATE SCANNER</button>
-  </div>
-
-  <!-- ÁUDIOS DE INTERFERÊNCIA E SINAL -->
   <audio id="sfxAudio" preload="auto"></audio>
 
   <script>
-    // 1. CONFIGURAÇÃO OFICIAL DO FIREBASE DO USUÁRIO
     const firebaseConfig = {
       apiKey: "AIzaSyAk-aZpWPXD0za40kDF7kwL9ej3EfaYy6E",
       authDomain: "uptime-halloween-2026.firebaseapp.com",
@@ -321,7 +260,6 @@
     const db = firebase.database();
     const sessionRef = db.ref('montreal_session');
 
-    // 2. ELEMENTOS DOM & ESTADO
     const freqDisplay = document.getElementById('freqDisplay');
     const sweepStatus = document.getElementById('sweepStatus');
     const userSpeechText = document.getElementById('userSpeechText');
@@ -332,34 +270,20 @@
     const sfxAudio = document.getElementById('sfxAudio');
     const mobileJumpscareLayer = document.getElementById('mobileJumpscareLayer');
     const mobileJumpscareVideo = document.getElementById('mobileJumpscareVideo');
-    const apiModal = document.getElementById('apiModal');
 
     let geminiApiKey = localStorage.getItem('GEMINI_API_KEY') || "";
+    let geminiModel = "gemini-2.5-flash";
     let isBusyGlobally = false;
     let currentHate = 30;
     let currentTotem = "tv";
     let isTestMode = false;
     let isHunting = false;
+    let lastMobileEventTimestamp = 0;
 
-    // Helper para caminhos com espaços
     function getMediaPath(filename) {
       return encodeURI("media/" + filename);
     }
 
-    // Validação da API Key
-    if (!geminiApiKey) {
-      apiModal.style.display = "flex";
-    }
-    function saveApiKey() {
-      const key = document.getElementById('apiKeyInput').value.trim();
-      if (key) {
-        localStorage.setItem('GEMINI_API_KEY', key);
-        geminiApiKey = key;
-        apiModal.style.display = "none";
-      }
-    }
-
-    // 3. OSCILOSCÓPIO E FREQUÊNCIA SWEEP
     const canvas = document.getElementById('scopeCanvas');
     const ctx = canvas.getContext('2d');
     canvas.width = canvas.offsetWidth;
@@ -371,40 +295,41 @@
       freqDisplay.textContent = sweepFreq.toFixed(1) + " MHz";
     }, 100);
 
-    function drawScope(activeNoise = false) {
+    function drawScope() {
       ctx.fillStyle = "rgba(2, 4, 3, 0.25)";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       ctx.lineWidth = 2;
-      ctx.strokeStyle = activeNoise ? "#ef4444" : "#10b981";
+      ctx.strokeStyle = isHunting ? "#ef4444" : "#10b981";
       ctx.beginPath();
 
       const sliceWidth = canvas.width / 40;
       let x = 0;
 
       for (let i = 0; i < 40; i++) {
-        const amplitude = activeNoise ? (Math.random() * 80 - 40) : (Math.random() * 20 - 10);
+        const amplitude = isHunting ? (Math.random() * 80 - 40) : (Math.random() * 20 - 10);
         const y = (canvas.height / 2) + amplitude;
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
         x += sliceWidth;
       }
       ctx.stroke();
-      requestAnimationFrame(() => drawScope(activeNoise));
+      requestAnimationFrame(drawScope);
     }
     drawScope();
 
-    // 4. SINCRONIZAÇÃO EM TEMPO REAL COM O FIREBASE
+    // Sincronização em tempo real com Firebase (incluindo API Key automática!)
     sessionRef.on('value', snap => {
       const data = snap.val();
       if (!data) return;
 
+      if (data.gemini_key) geminiApiKey = data.gemini_key;
+      if (data.gemini_model) geminiModel = data.gemini_model;
       if (data.hate !== undefined) currentHate = data.hate;
       if (data.totem) currentTotem = data.totem;
       if (data.test_mode !== undefined) isTestMode = data.test_mode;
       isHunting = (data.status === "hunting");
 
-      // Comportamento durante Caçada
       if (isHunting) {
         sweepStatus.textContent = "⚠️ SIGNAL COLLAPSE // HUNT IN PROGRESS";
         sweepStatus.style.color = "var(--red)";
@@ -413,7 +338,6 @@
         sweepStatus.style.color = "var(--green)";
       }
 
-      // Trava Global de 15 segundos
       isBusyGlobally = !!data.spirit_box_busy;
       if (isBusyGlobally) {
         pttBtn.disabled = true;
@@ -423,17 +347,14 @@
         pttBtn.querySelector('span').textContent = "🎙️ HOLD TO SPEAK";
       }
 
-      // Escuta para Jumpscare Individual Mobile
-      if (data.mobile_event && data.mobile_event.active) {
+      if (data.mobile_event && data.mobile_event.active && data.mobile_event.timestamp !== lastMobileEventTimestamp) {
+        lastMobileEventTimestamp = data.mobile_event.timestamp;
         triggerMobileJumpscare(data.mobile_event.video);
       }
     });
 
-    // 5. PENALIDADE DE SPAM (MICROFONIA + 5% HATE)
     pttBtn.addEventListener('click', () => {
-      if (isBusyGlobally) {
-        playMicrophonyPenalty();
-      }
+      if (isBusyGlobally) playMicrophonyPenalty();
     });
 
     function playMicrophonyPenalty() {
@@ -447,7 +368,6 @@
       setTimeout(() => { userSpeechText.style.color = "#f1f5f9"; }, 2000);
     }
 
-    // 6. GRAVAÇÃO DE VOZ (WEB SPEECH API)
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     let recognition;
 
@@ -471,9 +391,8 @@
         processSpiritBoxTransmission(spoken);
       };
 
-      recognition.onerror = (e) => {
-        console.error("Speech Error:", e);
-        userSpeechText.textContent = "Signal lost. Speak clearly in English.";
+      recognition.onerror = () => {
+        userSpeechText.textContent = "Signal lost. Hold PTT and speak clearly in English.";
         pttBtn.classList.remove('recording');
         pttBtn.querySelector('span').textContent = "🎙️ HOLD TO SPEAK";
       };
@@ -482,32 +401,38 @@
         pttBtn.classList.remove('recording');
         pttBtn.querySelector('span').textContent = "🎙️ HOLD TO SPEAK";
       };
-    } else {
-      userSpeechText.textContent = "Web Speech API not supported on this browser.";
     }
 
-    // Interações de Toque (Mobile Touch & Mouse)
     pttBtn.addEventListener('touchstart', (e) => {
       e.preventDefault();
-      if (!isBusyGlobally && recognition) recognition.start();
+      if (!isBusyGlobally && recognition) {
+        try { recognition.start(); } catch(err) {}
+      }
     });
     pttBtn.addEventListener('touchend', (e) => {
       e.preventDefault();
-      if (recognition) recognition.stop();
+      if (recognition) {
+        try { recognition.stop(); } catch(err) {}
+      }
     });
     pttBtn.addEventListener('mousedown', () => {
-      if (!isBusyGlobally && recognition) recognition.start();
+      if (!isBusyGlobally && recognition) {
+        try { recognition.start(); } catch(err) {}
+      }
     });
     pttBtn.addEventListener('mouseup', () => {
-      if (recognition) recognition.stop();
+      if (recognition) {
+        try { recognition.stop(); } catch(err) {}
+      }
     });
 
-    // 7. MOTOR COGNITIVO COM GEMINI FLASH & FIREBASE
+    function cleanJsonString(str) {
+      return str.replace(/```json/gi, '').replace(/```/g, '').trim();
+    }
+
     async function processSpiritBoxTransmission(studentText) {
-      // 1. Aciona a Trava Global de 15 segundos no Firebase
       startGlobalCooldown();
 
-      // 2. DETECÇÃO DINÂMICA DO TOTEM (CASA VS ESCOLA)
       let totemDescription = currentTotem;
       if (isTestMode) {
         if (currentTotem === "fan") totemDescription = "beside the spinning desk fan in your room";
@@ -525,7 +450,6 @@
         else if (currentTotem === "outside") totemDescription = "glaring through the school's glass entrance doors";
       }
 
-      // 3. MONTA O PROMPT DE SISTEMA COM ESTADO DINÂMICO
       const systemInstruction = `You are Ireena Limestone, a malevolent, corrupted bio-mutant ghost bound to the Uptime school (Room Montreal).
 You were a patient at Innseye Asylum (Patient #130). You transformed completely due to the glowing green substance.
 You are filled with hatred, jealousy, and arrogance. You murdered Ellie out of pure spite and jealousy towards Vincent Hazan.
@@ -533,7 +457,7 @@ You despise the students invading the school and consider them weak and foolish.
 
 CRITICAL INSTRUCTIONS:
 1. Speak ONLY in direct first-person speech. 
-2. NEVER describe your actions, movements, facial expressions, or gestures. NEVER write things like "*approaches the student*", "*whispers*", or "Ireena sighs:". Output ONLY the spoken words.
+2. NEVER describe your actions, movements, facial expressions, or gestures. Output ONLY the spoken words.
 3. Keep spoken replies short, sinister, biting, and cryptic (1 to 2 sentences maximum).
 4. Always speak in English.
 
@@ -544,7 +468,6 @@ KNOWLEDGE BASE:
 - The Substance: The emerald poison that granted you true form and took away your human eyes.
 
 GAME MECHANICS & HATE LOGIC:
-Evaluate the user's spoken input:
 - RESPECTFUL / CLEVER / CALM / SYMPATHETIC: Lower hate by -1% to -10% (max delta: -10).
 - RUDE / ARROGANT / TAUNTING / NONSENSE / AGGRESSIVE: Raise hate by +1% to +10% (max delta: +10).
 - NEUTRAL / CASUAL QUESTIONS: Delta between -2% and +2%.
@@ -558,20 +481,20 @@ SPECIAL TRIGGERS (Check strictly):
    - Spoken text: "Look closely at the screen, fools."
 3. UV SECRET PHRASE: If the user says "Put the baby down" or "Remember Eleanor":
    - Set "special_action": "STUN_FREEZE"
-   - Set "hate_delta": 0
+   - Set "hate_delta": -15
    - Spoken text: "Where... did you find those words...?"
 4. Otherwise, set "special_action": "NONE".
 
 RESPONSE FORMAT:
-You MUST output strictly a valid JSON object without markdown formatting, code fences, or additional text:
+You MUST output strictly a valid JSON object without markdown formatting:
 {
   "spoken_text": "<Your 1-2 sentence dialogue>",
-  "hate_delta": <-10 to 10>,
+  "hate_delta": <-15 to 10>,
   "special_action": "NONE" | "ELLIE_REVELATION" | "SARCASM_VIDEO" | "STUN_FREEZE"
 }`;
 
       try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiApiKey}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -582,13 +505,12 @@ You MUST output strictly a valid JSON object without markdown formatting, code f
         });
 
         const resData = await response.json();
-        const parsed = JSON.parse(resData.candidates[0].content.parts[0].text);
+        const rawText = resData.candidates[0].content.parts[0].text;
+        const parsed = JSON.parse(cleanJsonString(rawText));
 
-        // 4. Aplica o Hate Delta no Firebase
         let newHate = Math.max(0, Math.min(100, currentHate + (parsed.hate_delta || 0)));
         sessionRef.update({ hate: newHate });
 
-        // 5. Triggers Especiais de Cutscene
         if (parsed.special_action === "ELLIE_REVELATION") {
           entityResponseText.textContent = `"${parsed.spoken_text}"`;
           speakIreenaVoice(parsed.spoken_text);
@@ -607,7 +529,13 @@ You MUST output strictly a valid JSON object without markdown formatting, code f
           return;
         }
 
-        // 6. Dado de 30% de Chance de Resposta Sonora
+        if (parsed.special_action === "STUN_FREEZE") {
+          entityResponseText.textContent = `"${parsed.spoken_text}"`;
+          speakIreenaVoice(parsed.spoken_text);
+          sessionRef.update({ status: "idle" });
+          return;
+        }
+
         const roll30 = Math.random() <= 0.30;
         if (roll30) {
           entityResponseText.textContent = `"${parsed.spoken_text}"`;
@@ -626,24 +554,23 @@ You MUST output strictly a valid JSON object without markdown formatting, code f
       }
     }
 
-    // 8. VOZ DIEGÉTICA DA IREENA (SINTETIZADA COM PITCH MODIFICADO)
-    function speakIreenaVoice(text) {
+    // Perfil vocal oficial da Ireena (Fola + <long whisper>) com fallback nativo imediato
+    async function speakIreenaVoice(text) {
       if (!('speechSynthesis' in window)) return;
       window.speechSynthesis.cancel();
 
       const utter = new SpeechSynthesisUtterance(text);
       utter.lang = 'en-US';
-      utter.pitch = 0.55;
-      utter.rate = 0.85;
+      utter.pitch = 0.50;
+      utter.rate = 0.82;
 
       const voices = window.speechSynthesis.getVoices();
-      const sinisterVoice = voices.find(v => v.lang.includes('en') && (v.name.includes('Female') || v.name.includes('Google') || v.name.includes('Samantha')));
+      const sinisterVoice = voices.find(v => v.lang.includes('en') && (v.name.includes('Fola') || v.name.includes('Female') || v.name.includes('Google') || v.name.includes('Samantha')));
       if (sinisterVoice) utter.voice = sinisterVoice;
 
       window.speechSynthesis.speak(utter);
     }
 
-    // 9. CONTROLE DA BARRA DE COOLDOWN DE 15 SEGUNDOS
     function startGlobalCooldown() {
       sessionRef.update({ spirit_box_busy: true });
       cooldownBarContainer.style.display = "block";
@@ -663,7 +590,6 @@ You MUST output strictly a valid JSON object without markdown formatting, code f
       }, 100);
     }
 
-    // 10. REPRODUÇÃO DE JUMPSCARE INDIVIDUAL NO MOBILE
     function triggerMobileJumpscare(videoFile) {
       mobileJumpscareVideo.src = getMediaPath(videoFile);
       mobileJumpscareLayer.style.display = "flex";
