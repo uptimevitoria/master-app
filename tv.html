@@ -15,6 +15,7 @@
       --green-glow: rgba(16, 185, 129, 0.4);
       --red: #ef4444;
       --red-glow: rgba(239, 68, 68, 0.5);
+      --amber: #f59e0b;
       --cyan: #38bdf8;
       --font-mono: 'Courier New', Courier, monospace;
     }
@@ -34,7 +35,7 @@
       position: relative;
     }
 
-    /* TELA DE AUTOPLAY (PRIMEIRO CLIQUE DIEGÉTICO) */
+    /* TELA DE AUTOPLAY (PRIMEIRO CLIQUE DIEGÉTICO NO DEX) */
     #unlockScreen {
       position: fixed;
       inset: 0;
@@ -154,7 +155,7 @@
       z-index: 10;
     }
 
-    /* VÍDEO FULLSCREEN PLAYER (GHOST EVENTS & JUMPSCARES) */
+    /* VÍDEO FULLSCREEN PLAYER (GHOST EVENTS & CUTSCENES) */
     #videoContainer {
       position: fixed;
       inset: 0;
@@ -249,7 +250,7 @@
 
     <!-- CRONÔMETRO FINAL -->
     <div id="climaxBox">
-      <div style="font-size: 1.1rem; color: #f59e0b; letter-spacing: 3px;">⚠️ CRITICAL PURGE PROTOCOL</div>
+      <div style="font-size: 1.1rem; color: var(--amber); letter-spacing: 3px;">⚠️ CRITICAL PURGE PROTOCOL</div>
       <div id="climaxTimer">05:00</div>
     </div>
   </main>
@@ -263,7 +264,7 @@
   <!-- TELA DE CAÇADA (FLASHING OVERLAY) -->
   <div id="huntingOverlay">
     <div class="hunting-text">ENTITY HUNTING</div>
-    <div class="hunting-sub">USE GHOST SHIELD NOW // HIDE IMMEDATELY</div>
+    <div class="hunting-sub">USE GHOST SHIELD NOW // HIDE IMMEDIATELY</div>
   </div>
 
   <!-- PLAYER DE VÍDEO -->
@@ -276,7 +277,7 @@
   <audio id="sfxPlayer" preload="auto"></audio>
 
   <script>
-    // CREDENCIAIS OFICIAIS DO USUÁRIO
+    // 1. CREDENCIAIS OFICIAIS DO FIREBASE DO USUÁRIO
     const firebaseConfig = {
       apiKey: "AIzaSyAk-aZpWPXD0za40kDF7kwL9ej3EfaYy6E",
       authDomain: "uptime-halloween-2026.firebaseapp.com",
@@ -292,16 +293,7 @@
     const db = firebase.database();
     const sessionRef = db.ref('montreal_session');
 
-    // HEARTBEAT DE DIAGNÓSTICO (Informa ao Master App que a TV está conectada)
-setInterval(() => {
-  db.ref('montreal_session/tv_status').set({
-    online: true,
-    audio_unlocked: audioUnlocked,
-    last_ping: Date.now()
-  });
-}, 4000);
-    
-    // Elementos DOM
+    // 2. ELEMENTOS DOM & VARIÁVEIS DE CONTROLE
     const unlockScreen = document.getElementById('unlockScreen');
     const videoContainer = document.getElementById('videoContainer');
     const tvVideo = document.getElementById('tvVideo');
@@ -317,21 +309,32 @@ setInterval(() => {
     let audioUnlocked = false;
     let isHunting = false;
     let huntIntervals = [];
+    let climaxInterval = null;
+    let lastClimaxState = null;
+    let lastSfxTimestamp = 0;
+
+    // HEARTBEAT DE DIAGNÓSTICO (Informa ao Master App que a TV está conectada)
+    setInterval(() => {
+      db.ref('montreal_session/tv_status').set({
+        online: true,
+        audio_unlocked: audioUnlocked,
+        last_ping: Date.now()
+      });
+    }, 4000);
 
     // Helper para caminhos com espaços
     function getMediaPath(filename) {
       return encodeURI("media/" + filename);
     }
 
-    // Configuração de Música de Caçada
+    // Música de Caçada
     huntingMusic.src = getMediaPath("Bran Hunting Song.mp3");
 
-    // Destravamento de Autoplay do Navegador
+    // Destravamento de Autoplay no navegador do Samsung DeX
     function unlockSystemAudio() {
       audioUnlocked = true;
       unlockScreen.style.display = "none";
 
-      // Teste mudo para desbloquear áudio no Chrome do DeX
       huntingMusic.volume = 0;
       huntingMusic.play().then(() => {
         huntingMusic.pause();
@@ -339,7 +342,6 @@ setInterval(() => {
         huntingMusic.volume = 1.0;
       }).catch(e => console.log(e));
 
-      // Relógio do HUD
       setInterval(() => {
         const d = new Date();
         document.getElementById('clockDisplay').textContent = d.toLocaleTimeString();
@@ -359,7 +361,7 @@ setInterval(() => {
       }
 
       // 2. Telemetria Reativa ao Hate
-      if (data.hate !== undefined) {
+      if (data.hate !== undefined && lastClimaxState !== "good") {
         const h = data.hate;
         emkReading.textContent = `ELECTROMAGNETIC FIELD: ${(1.2 + (h * 0.08)).toFixed(1)} mG`;
         
@@ -369,7 +371,7 @@ setInterval(() => {
         } else if (h >= 40) {
           containmentStatus.textContent = "CONTAINMENT MATRIX: AGITATED / ANOMALOUS";
           containmentStatus.className = "readout-line";
-          containmentStatus.style.color = "var(--accent-amber)";
+          containmentStatus.style.color = "var(--amber)";
         } else {
           containmentStatus.textContent = "CONTAINMENT MATRIX: STABLE";
           containmentStatus.className = "readout-line";
@@ -389,24 +391,38 @@ setInterval(() => {
         playTvVideo(data.tv_event.video);
       }
 
-      // 5. Sons Atmosféricos Rápidos (Hissing / Whispers)
-      if (data.sfx_trigger && data.ambient_sfx) {
+      // 5. Sons Atmosféricos Rápidos (Hissing / Whispers) sem repetição acidental
+      if (data.sfx_trigger && data.ambient_sfx && data.sfx_trigger !== lastSfxTimestamp) {
+        lastSfxTimestamp = data.sfx_trigger;
         playSfx(data.ambient_sfx);
       }
 
       // 6. Clímax de 5 Minutos
-      if (data.countdown_active) {
+      if (data.countdown_active && data.climax_timestamp) {
         climaxBox.style.display = "flex";
         runClimaxClock(data.climax_timestamp);
       } else {
         climaxBox.style.display = "none";
+        clearInterval(climaxInterval);
       }
 
-      // 7. Resultado do Clímax
-      if (data.climax_result === "good") {
-        playTvVideo("Vincent-Glitch.mp4");
-      } else if (data.climax_result === "bad") {
+      // 7. Resultado do Clímax (Good Ending com END-COMPLETE.mp4 vs Bad Ending)
+      if (data.climax_result === "good" && lastClimaxState !== "good") {
+        lastClimaxState = "good";
+        stopHuntingSequence();
+        climaxBox.style.display = "none";
+        clearInterval(climaxInterval);
+        containmentStatus.textContent = "ANTIGEN DISPERSED // ENTITY NEUTRALIZED // CASE CLOSED";
+        containmentStatus.className = "readout-line";
+        containmentStatus.style.color = "var(--green)";
+        emkReading.textContent = "ELECTROMAGNETIC FIELD: 0.0 mG (PURIFIED)";
+        playTvVideo("END-COMPLETE.mp4");
+      } else if (data.climax_result === "bad" && lastClimaxState !== "bad") {
+        lastClimaxState = "bad";
+        stopHuntingSequence();
         playTvVideo("Laugh and Glass Breaking.mp4");
+      } else if (!data.climax_result) {
+        lastClimaxState = null;
       }
     });
 
@@ -423,7 +439,7 @@ setInterval(() => {
         huntingMusic.play().catch(e => console.log(e));
       }
 
-      // Agendamento esporádico dos loops da Ireena aos 10s e aos 35s
+      // Loops esporádicos da Ireena aos 10s e aos 35s
       huntIntervals.push(setTimeout(() => {
         if (isHunting) triggerHuntingVideoDuck("HUNTING LOOP 1.mp4");
       }, 10000));
@@ -439,11 +455,10 @@ setInterval(() => {
       
       tvVideo.src = getMediaPath(videoFile);
       videoContainer.style.display = "flex";
-      tvVideo.play();
+      tvVideo.play().catch(e => console.log(e));
 
       tvVideo.onended = () => {
         videoContainer.style.display = "none";
-        // Restaura o volume para 100% após o fim do vídeo
         if (isHunting) huntingMusic.volume = 1.0;
       };
     }
@@ -469,7 +484,6 @@ setInterval(() => {
 
       tvVideo.onended = () => {
         videoContainer.style.display = "none";
-        // Desativa a flag no Firebase para liberar a fila
         sessionRef.child('tv_event').update({ active: false });
       };
     }
@@ -480,10 +494,11 @@ setInterval(() => {
       sfxPlayer.play().catch(e => console.log(e));
     }
 
-    // Cronômetro do Clímax
+    // Cronômetro do Clímax sem encavalar intervalos
     function runClimaxClock(startTimestamp) {
+      clearInterval(climaxInterval);
       const duration = 300; // 5 minutos
-      const interval = setInterval(() => {
+      climaxInterval = setInterval(() => {
         const elapsed = Math.floor((Date.now() - startTimestamp) / 1000);
         const remain = Math.max(0, duration - elapsed);
 
@@ -492,8 +507,8 @@ setInterval(() => {
         climaxTimer.textContent = `${m}:${s}`;
 
         if (remain <= 0) {
-          clearInterval(interval);
-          playTvVideo("Laugh and Glass Breaking.mp4");
+          clearInterval(climaxInterval);
+          sessionRef.update({ climax_result: "bad", countdown_active: false });
         }
       }, 1000);
     }
