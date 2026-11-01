@@ -33,7 +33,7 @@
       display: flex;
       flex-direction: column;
       gap: 16px;
-      max-width: 1400px;
+      max-width: 1440px;
       margin: 0 auto;
     }
 
@@ -83,12 +83,12 @@
       padding: 16px;
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 12px;
     }
 
     .card h2 {
       font-family: var(--font-mono);
-      font-size: 0.9rem;
+      font-size: 0.88rem;
       color: var(--accent-cyan);
       letter-spacing: 1px;
       border-bottom: 1px solid var(--border);
@@ -102,7 +102,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 0.85rem;
+      font-size: 0.82rem;
     }
     .telemetry-val {
       font-family: var(--font-mono);
@@ -110,15 +110,22 @@
       font-weight: bold;
     }
 
-    .slider-box {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
     input[type="range"] {
       width: 100%;
       accent-color: var(--accent-red);
       cursor: pointer;
+    }
+
+    input[type="password"], input[type="text"], select {
+      background: #090c10;
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--font-mono);
+      padding: 9px 10px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      outline: none;
+      width: 100%;
     }
 
     .btn-group {
@@ -131,7 +138,7 @@
       border: 1px solid #334155;
       color: var(--text);
       font-family: var(--font-mono);
-      font-size: 0.78rem;
+      font-size: 0.76rem;
       font-weight: bold;
       padding: 10px 8px;
       border-radius: 4px;
@@ -152,17 +159,6 @@
     .btn-cyan { background: #0e7490; border-color: var(--accent-cyan); color: #cffafe; }
     .btn-cyan:hover { background: #155e75; }
 
-    select {
-      background: #090c10;
-      border: 1px solid var(--border);
-      color: var(--text);
-      font-family: var(--font-mono);
-      padding: 10px;
-      border-radius: 4px;
-      font-size: 0.85rem;
-      outline: none;
-    }
-
     #consoleLog {
       background: #040608;
       border: 1px solid var(--border);
@@ -171,9 +167,9 @@
       font-family: var(--font-mono);
       font-size: 0.75rem;
       color: #38bdf8;
-      height: 140px;
+      height: 150px;
       overflow-y: auto;
-      line-height: 1.4;
+      line-height: 1.45;
     }
 
     .health-status-box {
@@ -185,7 +181,7 @@
       padding: 10px;
       border-radius: 4px;
       font-family: var(--font-mono);
-      font-size: 0.78rem;
+      font-size: 0.76rem;
     }
   </style>
 </head>
@@ -205,24 +201,34 @@
 
   <div class="grid">
 
-    <!-- CARD 0: DIAGNÓSTICO DO ECOSSISTEMA (ALL UP AND RUNNING) -->
+    <!-- CARD 0: CHAVE CENTRAL DA IA & HEALTH CHECK -->
     <div class="card">
-      <h2>🩺 DIAGNÓSTICO // HEALTH CHECK</h2>
-      
+      <h2>🔑 CREDENCIAL IA & HEALTH CHECK</h2>
+
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <label style="font-size: 0.7rem; color: var(--text-dim);">CHAVE GEMINI (SINCRONIZA COM TODOS OS CELULARES):</label>
+        <div style="display: flex; gap: 6px;">
+          <input type="password" id="masterApiKeyInput" placeholder="Cole sua Gemini API Key (AIzaSy...)">
+          <input type="text" id="masterModelInput" value="gemini-2.5-flash" style="max-width: 135px;" title="Modelo Gemini">
+          <button class="btn-green" onclick="syncApiKeyToFirebase()">SALVAR</button>
+        </div>
+      </div>
+
       <div class="health-status-box">
         <div id="hcFirebase">🌐 Firebase Realtime: AGUARDANDO TESTE</div>
         <div id="hcTv">📺 Samsung DeX TV: AGUARDANDO TESTE</div>
+        <div id="hcApi">🤖 Chave Gemini no Banco: VERIFICANDO...</div>
         <div id="hcTotem">📍 Totem Ativo: Sincronizando...</div>
-        <div id="hcLatency">⚡ Latência: -- ms</div>
       </div>
 
-      <button class="btn-green" style="padding: 12px;" onclick="runHealthCheck()">
-        🔍 EXECUTAR DIAGNÓSTICO GERAL (HEALTH CHECK)
+      <button class="btn-cyan" onclick="runHealthCheck()">
+        🔍 EXECUTAR DIAGNÓSTICO GERAL (ALL UP & RUNNING)
       </button>
 
       <div class="btn-group">
-        <button onclick="resetGameSession()" class="btn-red">⚠️ HARD RESET SESSÃO</button>
-        <button onclick="clearSingleFlags()" class="btn-amber">RESET TRAVAS/ROTEADOR</button>
+        <button onclick="reloadCameraPlates()" class="btn-green">🎞️ RECARREGAR 10 CHAPAS</button>
+        <button onclick="clearSingleFlags()" class="btn-amber">🔓 LIBERAR TRAVAS</button>
+        <button onclick="resetGameSession()" class="btn-red">⚠️ HARD RESET</button>
       </div>
     </div>
 
@@ -230,13 +236,13 @@
     <div class="card">
       <h2>🔥 TELEMETRIA DO HATE <span id="hateDisplay" class="telemetry-val">30%</span></h2>
       
-      <div class="slider-box">
+      <div>
         <input type="range" id="hateSlider" min="0" max="100" value="30">
-        <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-dim);">
+        <div style="display: flex; justify-content: space-between; font-size: 0.68rem; color: var(--text-dim); margin-top: 4px;">
           <span>0% (Calmo)</span>
           <span>40% (Sarcasmo)</span>
           <span>80% (Risco Hunt)</span>
-          <span>100% (Morte)</span>
+          <span>100% (Hunt Total)</span>
         </div>
       </div>
 
@@ -249,8 +255,8 @@
         <button onclick="setHate(100)" class="btn-red">100%</button>
       </div>
 
-      <div style="border-top: 1px solid var(--border); padding-top: 10px;">
-        <div class="telemetry-row" style="margin-bottom: 8px;">
+      <div style="border-top: 1px solid var(--border); padding-top: 10px; display: flex; flex-direction: column; gap: 6px;">
+        <div class="telemetry-row">
           <span>Próxima Checagem (PG):</span>
           <span id="pgTimerDisplay" style="font-family: var(--font-mono); color: var(--accent-cyan);">Calculando...</span>
         </div>
@@ -263,14 +269,14 @@
 
     <!-- CARD 2: COMANDOS DE CAÇADA E CLÍMAX -->
     <div class="card">
-      <h2>💀 PROTOCOLOS DE CRISE</h2>
+      <h2>💀 PROTOCOLOS DE CRISE & CLÍMAX</h2>
       
       <div style="display: flex; flex-direction: column; gap: 8px;">
-        <button class="btn-red" style="padding: 14px; font-size: 0.9rem;" onclick="triggerHuntManual()">
+        <button class="btn-red" style="padding: 13px; font-size: 0.86rem;" onclick="triggerHuntManual()">
           🚨 FORÇAR CAÇADA AGORA (1 MIN)
         </button>
-        <button class="btn-green" style="padding: 12px;" onclick="triggerShieldWin()">
-          🛡️ VITÓRIA DO SHIELD (Derruba Hate & Glitch)
+        <button class="btn-green" style="padding: 11px;" onclick="triggerShieldWin()">
+          🛡️ VITÓRIA DO SHIELD (Hate 40% + Glitch Vincent)
         </button>
         <button class="btn-amber" onclick="cancelHuntEmergency()">
           ⏹️ ABORTAR CAÇADA MANUALMENTE
@@ -278,11 +284,11 @@
       </div>
 
       <div style="border-top: 1px solid var(--border); padding-top: 10px;">
-        <label style="font-size: 0.75rem; color: var(--text-dim); display: block; margin-bottom: 6px;">CLÍMAX FINAL (CRONÔMETRO DE 5 MIN):</label>
+        <label style="font-size: 0.72rem; color: var(--text-dim); display: block; margin-bottom: 6px;">CLÍMAX FINAL (CRONÔMETRO DE 5 MIN):</label>
         <div class="btn-group">
-          <button class="btn-amber" onclick="startClimaxCountdown()">INICIAR 5MIN</button>
-          <button class="btn-green" onclick="setClimaxResult('good')">GOOD END</button>
-          <button class="btn-red" onclick="setClimaxResult('bad')">BAD END</button>
+          <button class="btn-amber" onclick="startClimaxCountdown()">⏱️ INICIAR 5MIN</button>
+          <button class="btn-green" onclick="setClimaxResult('good')">🌟 GOOD END (ELLIE)</button>
+          <button class="btn-red" onclick="setClimaxResult('bad')">💀 BAD END</button>
         </div>
       </div>
     </div>
@@ -293,18 +299,17 @@
       
       <div style="display: flex; flex-direction: column; gap: 6px;">
         <div style="display: flex; justify-content: space-between; align-items: center;">
-          <label style="font-size: 0.75rem; color: var(--text-dim);">TOTEM ATIVO DA IREENA:</label>
-          <span id="totemContextBadge" style="font-size: 0.65rem; color: var(--accent-purple); font-weight: bold;">TABELA ESCOLA</span>
+          <label style="font-size: 0.72rem; color: var(--text-dim);">TOTEM ATIVO DA IREENA:</label>
+          <span id="totemContextBadge" style="font-size: 0.65rem; color: var(--accent-green); font-weight: bold;">TABELA ESCOLA</span>
         </div>
-        <select id="totemSelect" onchange="changeTotem(this.value)">
-          <!-- Opções populadas dinamicamente via JS de acordo com Modo Escola / Casa -->
-        </select>
+        <select id="totemSelect" onchange="changeTotem(this.value)"></select>
       </div>
 
       <div style="border-top: 1px solid var(--border); padding-top: 10px; display: flex; flex-direction: column; gap: 8px;">
-        <label style="font-size: 0.75rem; color: var(--text-dim);">CUTSCENES DIEGÉTICAS NA TV:</label>
+        <label style="font-size: 0.72rem; color: var(--text-dim);">CUTSCENES ESPECIAIS NA TV DEX:</label>
         <button class="btn-cyan" onclick="triggerCutscene('Ellie-Revelation.mp4')">🎬 REVELAÇÃO DA ELLIE (Spirit Box)</button>
         <button class="btn-cyan" onclick="triggerCutscene('Vincent-Glitch.mp4')">⚡ GLITCH DO VINCENT (Pós-Hunt)</button>
+        <button class="btn-green" onclick="triggerCutscene('END-COMPLETE.mp4')">🕊️ LIBERTAÇÃO DA ELLIE (END-COMPLETE.mp4)</button>
       </div>
     </div>
 
@@ -313,7 +318,7 @@
       <h2>👁️ DISPAROS DIRETOS (TESTES)</h2>
       
       <div style="display: flex; flex-direction: column; gap: 8px;">
-        <label style="font-size: 0.75rem; color: var(--text-dim);">JUMPSCARE MOBILE (ALUNOS):</label>
+        <label style="font-size: 0.72rem; color: var(--text-dim);">JUMPSCARE MOBILE (ALUNOS):</label>
         <select id="mobileVideoSelect">
           <option value="Vertical-Jumpscare 6 - BEST.mp4">Jumpscare 6 - BEST (I'm in your phone)</option>
           <option value="Vertical-Jumpscare 7 - BEST.mp4">Jumpscare 7 - BEST (Glass Crack)</option>
@@ -327,7 +332,7 @@
         </select>
         <button onclick="fireMobileEventManual()">📱 ENVIAR SUSTO MOBILE</button>
 
-        <label style="font-size: 0.75rem; color: var(--text-dim); margin-top: 6px;">EVENTO DE TV (SAMSUNG DEX):</label>
+        <label style="font-size: 0.72rem; color: var(--text-dim); margin-top: 4px;">EVENTO DE TV (SAMSUNG DEX):</label>
         <select id="tvVideoSelect">
           <option value="Sarcasm 1.mp4">Sarcasm 1 (Stupid people)</option>
           <option value="Sarcasm 2.mp4">Sarcasm 2 (Begone students)</option>
@@ -357,7 +362,6 @@
   </div>
 
   <script>
-    // CREDENCIAIS OFICIAIS DO USUÁRIO
     const firebaseConfig = {
       apiKey: "AIzaSyAk-aZpWPXD0za40kDF7kwL9ej3EfaYy6E",
       authDomain: "uptime-halloween-2026.firebaseapp.com",
@@ -373,16 +377,15 @@
     const db = firebase.database();
     const sessionRef = db.ref('montreal_session');
 
-    // Estado Local
     let currentHate = 30;
-    let isTestMode = false;      // false = Escola, true = Casa
-    let isProceduralMode = true; // true = IA viva/relógio, false = Estático/Scriptado
+    let isTestMode = false;
+    let isProceduralMode = true;
     let nextCheckSeconds = 300;
     let gracePeriod = false;
     let huntingActive = false;
     let currentTotemValue = "tv";
+    let huntTimerTimeout = null;
 
-    // Definição das Tabelas de Totens
     const schoolTotems = [
       { id: "tv", label: "TV (Sala Montreal - Central)" },
       { id: "skull", label: "Caveira (Ellie - Mesa)" },
@@ -401,7 +404,6 @@
       { id: "tree", label: "Árvore de Natal (Ireena Wander 2)" }
     ];
 
-    // Baralhos de Vídeo sem Repetição Imediata
     const mobileDeckPriority = ["Vertical-Jumpscare 6 - BEST.mp4", "Vertical-Jumpscare 7 - BEST.mp4"];
     const mobileDeckRemaining = ["Vertical-Jumpscare3.mp4", "Vertical-Jumpscare1.mp4", "Vertical-Jumpscare2.mp4", "Vertical-Jumpscare4.mp4", "Vertical-Jumpscare5.mp4", "Whisper with jumpscare.mp4"];
     let currentMobileDeck = [...mobileDeckPriority, ...mobileDeckRemaining];
@@ -416,7 +418,27 @@
       log.innerHTML = `<div>[${time}] ${msg}</div>` + log.innerHTML;
     }
 
-    // Popula o Dropdown de Totens de Acordo com o Ambiente
+    // Sincroniza a API Key com todos os celulares via Firebase
+    function syncApiKeyToFirebase() {
+      const key = document.getElementById('masterApiKeyInput').value.trim().replace(/[\r\n\s]/g, '');
+      const model = document.getElementById('masterModelInput').value.trim() || "gemini-2.5-flash";
+      if (!key) return alert("Insira uma chave Gemini válida.");
+      localStorage.setItem('GEMINI_API_KEY', key);
+      sessionRef.update({
+        gemini_key: key,
+        gemini_model: model
+      }).then(() => {
+        logMsg(`🔑 Chave Gemini e modelo (${model}) sincronizados no Firebase para todos os aparelhos!`);
+        document.getElementById('hcApi').innerHTML = `🤖 Chave Gemini no Banco: <span style="color: var(--accent-green)">ATIVA (${model})</span>`;
+      });
+    }
+
+    // Carrega chave local se já existir no computador do Mestre
+    const localSavedKey = localStorage.getItem('GEMINI_API_KEY');
+    if (localSavedKey) {
+      document.getElementById('masterApiKeyInput').value = localSavedKey;
+    }
+
     function renderTotemDropdown() {
       const select = document.getElementById('totemSelect');
       const badge = document.getElementById('totemContextBadge');
@@ -433,7 +455,6 @@
         select.appendChild(opt);
       });
 
-      // Se o totem anterior existir na nova lista, mantém; senão coloca o primeiro
       const exists = activeList.some(t => t.id === currentTotemValue);
       if (exists) {
         select.value = currentTotemValue;
@@ -444,32 +465,25 @@
       }
     }
 
-    // Alternar Ambiente (Escola vs Casa)
     function toggleEnvironment() {
       isTestMode = !isTestMode;
       sessionRef.update({ test_mode: isTestMode });
       updateEnvButtonUI();
       renderTotemDropdown();
-      logMsg(isTestMode ? "🏠 MODO TESTE EM CASA ATIVADO (Totens Domésticos Carregados)" : "🏫 MODO ESCOLA LIVE ATIVADO (Totens de Montreal Carregados)");
+      logMsg(isTestMode ? "🏠 MODO TESTE EM CASA ATIVADO" : "🏫 MODO ESCOLA LIVE ATIVADO");
     }
 
     function updateEnvButtonUI() {
       const btn = document.getElementById('btnEnvironment');
-      if (isTestMode) {
-        btn.textContent = "AMBIENTE: CASA (TESTE)";
-        btn.className = "btn-purple";
-      } else {
-        btn.textContent = "AMBIENTE: ESCOLA (LIVE)";
-        btn.className = "btn-green";
-      }
+      btn.textContent = isTestMode ? "AMBIENTE: CASA (TESTE)" : "AMBIENTE: ESCOLA (LIVE)";
+      btn.className = isTestMode ? "btn-purple" : "btn-green";
     }
 
-    // Alternar Modo de Jogo (Procedural vs Normal)
     function toggleGameMode() {
       isProceduralMode = !isProceduralMode;
       sessionRef.update({ game_mode: isProceduralMode ? "procedural" : "normal" });
       updateModeButtonUI();
-      logMsg(isProceduralMode ? "🎲 MODO PROCEDURAL ATIVADO (Relógio & Dados Vivos)" : "🔒 MODO NORMAL ATIVADO (Pistas Estáticas / Sem Surpresas)");
+      logMsg(isProceduralMode ? "🎲 MODO PROCEDURAL ATIVADO" : "🔒 MODO NORMAL (ESTÁTICO) ATIVADO");
     }
 
     function updateModeButtonUI() {
@@ -485,16 +499,18 @@
       }
     }
 
-    // Inicialização da Sessão
-    sessionRef.update({
-      initialized: true,
-      spirit_box_cooldown: false
-    });
+    sessionRef.update({ initialized: true });
 
-    // Ouvinte em Tempo Real do Firebase
     sessionRef.on('value', snap => {
       const val = snap.val();
       if (!val) return;
+
+      if (val.gemini_key) {
+        document.getElementById('masterApiKeyInput').value = val.gemini_key;
+        document.getElementById('hcApi').innerHTML = `🤖 Chave Gemini no Banco: <span style="color: var(--accent-green)">SINCRONIZADA (${val.gemini_model || 'gemini-2.5-flash'})</span>`;
+      } else {
+        document.getElementById('hcApi').innerHTML = `🤖 Chave Gemini no Banco: <span style="color: var(--accent-amber)">AUSENTE (Cole acima e salve)</span>`;
+      }
 
       if (val.hate !== undefined && val.hate !== currentHate) {
         currentHate = val.hate;
@@ -534,37 +550,32 @@
       }
     });
 
-    // Diagnóstico Geral (Health Check)
     function runHealthCheck() {
-      logMsg("🩺 Iniciando Diagnóstico do Ecossistema...");
+      logMsg("🩺 Executando Diagnóstico Geral do Ecossistema...");
       const startPing = Date.now();
 
-      // Teste Firebase RTDB
       sessionRef.child('health_ping').set(startPing).then(() => {
         const latency = Date.now() - startPing;
-        document.getElementById('hcFirebase').innerHTML = `🌐 Firebase Realtime: <span style="color: var(--accent-green)">ONLINE</span>`;
-        document.getElementById('hcLatency').textContent = `⚡ Latência: ${latency} ms`;
-        logMsg(`✅ Firebase online (latência: ${latency}ms)`);
+        document.getElementById('hcFirebase').innerHTML = `🌐 Firebase Realtime: <span style="color: var(--accent-green)">ONLINE (${latency}ms)</span>`;
+        logMsg(`✅ Firebase RTDB conectado (${latency}ms).`);
       }).catch(err => {
-        document.getElementById('hcFirebase').innerHTML = `🌐 Firebase Realtime: <span style="color: var(--accent-red)">ERRO (${err.message})</span>`;
+        document.getElementById('hcFirebase').innerHTML = `🌐 Firebase Realtime: <span style="color: var(--accent-red)">ERRO</span>`;
       });
 
-      // Teste TV DeX Heartbeat
       db.ref('montreal_session/tv_status').once('value').then(snap => {
         const tvData = snap.val();
         if (tvData && tvData.last_ping && (Date.now() - tvData.last_ping < 12000)) {
-          document.getElementById('hcTv').innerHTML = `📺 Samsung DeX TV: <span style="color: var(--accent-green)">CONECTADA & SINTONIZADA</span>`;
-          logMsg("✅ TV Samsung DeX respondendo ao sinal de presença.");
+          const audioMsg = tvData.audio_unlocked ? "ÁUDIO DESTRAVADO" : "FALTA CLICAR NA TELA DA TV";
+          document.getElementById('hcTv').innerHTML = `📺 Samsung DeX TV: <span style="color: var(--accent-green)">ONLINE (${audioMsg})</span>`;
+          logMsg(`✅ TV Samsung DeX conectada (${audioMsg}).`);
         } else {
-          document.getElementById('hcTv').innerHTML = `📺 Samsung DeX TV: <span style="color: var(--accent-amber)">OFFLINE / AGUARDANDO DESTRAVAMENTO</span>`;
-          logMsg("⚠️ TV Samsung DeX não respondeu nos últimos 12 segundos. Certifique-se de que tv.html está aberta!");
+          document.getElementById('hcTv').innerHTML = `📺 Samsung DeX TV: <span style="color: var(--accent-amber)">OFFLINE / FECHADA</span>`;
+          logMsg("⚠️ TV Samsung DeX não detectada nos últimos 12s.");
         }
       });
     }
 
-    // Controles de Hate
-    const hateSlider = document.getElementById('hateSlider');
-    hateSlider.addEventListener('input', (e) => {
+    document.getElementById('hateSlider').addEventListener('input', (e) => {
       setHate(parseInt(e.target.value));
     });
 
@@ -572,7 +583,7 @@
       val = Math.max(0, Math.min(100, val));
       currentHate = val;
       sessionRef.update({ hate: currentHate });
-      logMsg(`Hate ajustado para: ${currentHate}%`);
+      logMsg(`🔥 Hate atualizado para: ${currentHate}%`);
       updateTelemetryCalculations();
     }
 
@@ -583,10 +594,9 @@
     function changeTotem(totem) {
       currentTotemValue = totem;
       sessionRef.update({ totem: totem });
-      logMsg(`Totem ativo mudou para: ${totem}`);
+      logMsg(`📍 Totem alterado para: ${totem}`);
     }
 
-    // Cálculos da PG e Chances
     function updateTelemetryCalculations() {
       nextCheckSeconds = Math.round(300 * Math.pow(0.2, currentHate / 100));
       document.getElementById('pgTimerDisplay').textContent = `${nextCheckSeconds}s`;
@@ -601,7 +611,6 @@
       document.getElementById('huntChanceDisplay').textContent = `${huntChance}%`;
     }
 
-    // Loop Procedural (Só roda se Modo Procedural estiver ativo)
     setInterval(() => {
       if (!isProceduralMode || gracePeriod || huntingActive) return;
 
@@ -615,9 +624,8 @@
     }, 1000);
 
     function runProceduralRoll() {
-      logMsg(`🎲 Rolando dados procedurais com Hate em ${currentHate}%...`);
+      logMsg(`🎲 Rolando dados procedurais (Hate: ${currentHate}%)...`);
 
-      // 1. Checagem de Caçada
       if (currentHate >= 80) {
         let huntChance = 0;
         if (currentHate >= 100) huntChance = 1.0;
@@ -627,26 +635,21 @@
         else if (currentHate >= 80) huntChance = 0.30;
 
         if (Math.random() <= huntChance) {
-          logMsg(`🚨 DADO DE CAÇADA ATIVADO (${Math.round(huntChance * 100)}% chance)!`);
+          logMsg(`🚨 CAÇADA PROCEDURAL ATIVADA!`);
           triggerHuntManual();
           return;
         }
       }
 
-      // 2. Checagem de Ghost Event
       let eventChance = 0.40;
       if (currentHate >= 70) eventChance = 0.70;
       else if (currentHate >= 40) eventChance = 0.55;
 
       if (Math.random() <= eventChance) {
-        logMsg(`👻 Ghost Event procedural sorteado!`);
-        if (Math.random() < 0.5) {
-          fireNextMobileDeck();
-        } else {
-          fireNextTvDeck();
-        }
+        if (Math.random() < 0.5) fireNextMobileDeck();
+        else fireNextTvDeck();
       } else {
-        logMsg(`🍃 Silêncio atmosférico mantido (Dado falhou de propósito).`);
+        logMsg(`🍃 Silêncio mantido (Sopro atmosférico).`);
         sessionRef.update({
           ambient_sfx: currentHate >= 50 ? "Hissing 1.mp3" : "Whispers 1.mp3",
           sfx_trigger: Date.now()
@@ -662,7 +665,7 @@
       sessionRef.update({
         mobile_event: { active: true, video: video, timestamp: Date.now() }
       });
-      logMsg(`📱 Disparado Mobile Event: ${video}`);
+      logMsg(`📱 Mobile Event Disparado: ${video}`);
     }
 
     function fireNextTvDeck() {
@@ -674,10 +677,9 @@
       sessionRef.update({
         tv_event: { active: true, video: video, timestamp: Date.now() }
       });
-      logMsg(`📺 Disparado TV Event: ${video}`);
+      logMsg(`📺 TV Event Disparado: ${video}`);
     }
 
-    // Disparos Manuais
     function fireMobileEventManual() {
       const video = document.getElementById('mobileVideoSelect').value;
       sessionRef.update({
@@ -698,21 +700,21 @@
       sessionRef.update({
         tv_event: { active: true, video: videoName, timestamp: Date.now() }
       });
-      logMsg(`🎬 Cutscene executada na TV: ${videoName}`);
+      logMsg(`🎬 Cutscene enviada para a TV: ${videoName}`);
     }
 
-    // Caçada
     function triggerHuntManual() {
       huntingActive = true;
+      clearTimeout(huntTimerTimeout);
       sessionRef.update({
         status: "hunting",
         hunt_timestamp: Date.now()
       });
-      logMsg(`🚨 CAÇADA INICIADA (Música + Loops de 1 minuto)`);
+      logMsg(`🚨 CAÇADA INICIADA (1 Minuto)!`);
 
-      setTimeout(() => {
+      huntTimerTimeout = setTimeout(() => {
         if (huntingActive) {
-          logMsg(`⌛ Caçada completou 1 minuto. Encerrando crise.`);
+          logMsg(`⌛ Tempo de Caçada esgotado.`);
           cancelHuntEmergency();
         }
       }, 60000);
@@ -721,13 +723,14 @@
     function triggerShieldWin() {
       huntingActive = false;
       gracePeriod = true;
+      clearTimeout(huntTimerTimeout);
       setHate(40);
 
       sessionRef.update({
         status: "vincent_glitch",
         tv_event: { active: true, video: "Vincent-Glitch.mp4", timestamp: Date.now() }
       });
-      logMsg(`🛡️ GHOST SHIELD DEFECT: Vincent assumiu a TV! Hate derrubado para 40%.`);
+      logMsg(`🛡️ GHOST SHIELD VENCEU: Vincent assumiu a TV! Hate reduzido para 40%.`);
 
       setTimeout(() => {
         gracePeriod = false;
@@ -737,32 +740,50 @@
 
     function cancelHuntEmergency() {
       huntingActive = false;
+      clearTimeout(huntTimerTimeout);
       sessionRef.update({ status: "idle" });
       logMsg(`⏹️ Caçada encerrada.`);
     }
 
-    // Clímax
     function startClimaxCountdown() {
       sessionRef.update({
         countdown_active: true,
-        countdown_seconds: 300,
+        climax_result: null,
         climax_timestamp: Date.now()
       });
-      logMsg(`⏱️ Clímax Final de 5 minutos iniciado na TV!`);
+      logMsg(`⏱️ Contagem regressiva de 5 minutos iniciada!`);
     }
 
     function setClimaxResult(res) {
       sessionRef.update({
         climax_result: res,
-        countdown_active: false
+        countdown_active: false,
+        status: "idle"
       });
-      logMsg(`🏁 Fim de Jogo declarado: ${res.toUpperCase()}`);
+      logMsg(`🏁 Desfecho acionado: ${res.toUpperCase()}`);
     }
 
-    // Resets Administrativos
+    function reloadCameraPlates() {
+      sessionRef.update({ camera_reload_timestamp: Date.now() });
+      logMsg("🎞️ 10 Chapas fotográficas recarregadas remotamente em todas as câmeras!");
+    }
+
+    function clearSingleFlags() {
+      sessionRef.update({
+        vincent_done: false,
+        spirit_box_busy: false
+      });
+      logMsg("🔓 Travas do Roteador (Vincent) e Spirit Box liberadas.");
+    }
+
     function resetGameSession() {
-      if (!confirm("Tem certeza que deseja resetar todo o estado da Sala Montreal?")) return;
+      if (!confirm("Resetar toda a sessão da Sala Montreal para uma nova turma?")) return;
+      const savedKey = document.getElementById('masterApiKeyInput').value.trim();
+      const savedModel = document.getElementById('masterModelInput').value.trim() || "gemini-2.5-flash";
       sessionRef.set({
+        initialized: true,
+        gemini_key: savedKey,
+        gemini_model: savedModel,
         hate: 30,
         status: "idle",
         totem: isTestMode ? "fan" : "tv",
@@ -771,20 +792,12 @@
         spirit_box_busy: false,
         countdown_active: false,
         vincent_done: false,
-        climax_result: null
+        climax_result: null,
+        camera_reload_timestamp: Date.now()
       });
-      logMsg("🔄 HARD RESET: Sessão restaurada para parâmetros iniciais.");
+      logMsg("🔄 HARD RESET COMPLETO: Sala pronta para a próxima turma!");
     }
 
-    function clearSingleFlags() {
-      sessionRef.update({
-        vincent_done: false,
-        spirit_box_busy: false
-      });
-      logMsg("🔓 Travas de uso único (Vincent/Roteador & Spirit Box) liberadas.");
-    }
-
-    // Inicialização
     renderTotemDropdown();
     updateEnvButtonUI();
     updateModeButtonUI();
