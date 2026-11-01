@@ -293,8 +293,8 @@
     let huntIntervals = [];
     let climaxInterval = null;
     let lastClimaxState = null;
-    let lastSfxTimestamp = 0;
-    let lastTvEventTimestamp = 0;
+    let lastSfxTimestamp = Date.now();
+    let lastTvEventTimestamp = Date.now();
 
     setInterval(() => {
       db.ref('montreal_session/tv_status').set({
@@ -331,6 +331,21 @@
       const data = snap.val();
       if (!data) return;
 
+      // 0. Se a Chave Geral no Master App estiver em OFF (Estaca Zero)
+      if (data.game_power === "off") {
+        stopHuntingSequence();
+        tvVideo.pause();
+        videoContainer.style.display = "none";
+        climaxBox.style.display = "none";
+        clearInterval(climaxInterval);
+        lastClimaxState = null;
+        containmentStatus.textContent = "SYSTEM STANDBY // MASTER SWITCH OFF";
+        containmentStatus.className = "readout-line";
+        containmentStatus.style.color = "#64748b";
+        emkReading.textContent = "ELECTROMAGNETIC FIELD: 0.0 mG (STANDBY)";
+        return;
+      }
+
       if (data.totem) {
         activeTotemIndicator.textContent = `ACTIVE TOTEM: ${data.totem.toUpperCase()}`;
       }
@@ -359,13 +374,13 @@
         stopHuntingSequence();
       }
 
-      // Trava de timestamp único para não reiniciar vídeo no meio da reprodução
-      if (data.tv_event && data.tv_event.active && data.tv_event.timestamp !== lastTvEventTimestamp) {
+      // Ignora vídeos antigos deixados no banco antes da abertura da página
+      if (data.tv_event && data.tv_event.active && data.tv_event.timestamp > lastTvEventTimestamp) {
         lastTvEventTimestamp = data.tv_event.timestamp;
         playTvVideo(data.tv_event.video);
       }
 
-      if (data.sfx_trigger && data.ambient_sfx && data.sfx_trigger !== lastSfxTimestamp) {
+      if (data.sfx_trigger && data.ambient_sfx && data.sfx_trigger > lastSfxTimestamp) {
         lastSfxTimestamp = data.sfx_trigger;
         playSfx(data.ambient_sfx);
       }
@@ -387,11 +402,11 @@
         containmentStatus.className = "readout-line";
         containmentStatus.style.color = "var(--green)";
         emkReading.textContent = "ELECTROMAGNETIC FIELD: 0.0 mG (PURIFIED)";
-        playTvVideo("END-COMPLETE.mp4");
+        playTvVideo("END-COMPLETE.mp4", true);
       } else if (data.climax_result === "bad" && lastClimaxState !== "bad") {
         lastClimaxState = "bad";
         stopHuntingSequence();
-        playTvVideo("Laugh and Glass Breaking.mp4");
+        playTvVideo("Laugh and Glass Breaking.mp4", true);
       } else if (!data.climax_result) {
         lastClimaxState = null;
       }
@@ -437,7 +452,7 @@
       huntIntervals = [];
     }
 
-    function playTvVideo(videoFile) {
+    function playTvVideo(videoFile, clearClimaxAfter = false) {
       if (isHunting) huntingMusic.volume = 0.25;
       tvVideo.src = getMediaPath(videoFile);
       videoContainer.style.display = "flex";
@@ -449,6 +464,10 @@
         videoContainer.style.display = "none";
         if (isHunting) huntingMusic.volume = 1.0;
         sessionRef.child('tv_event').update({ active: false });
+        if (clearClimaxAfter) {
+          // Limpa o climax_result após o vídeo terminar para nunca repetir sozinho!
+          sessionRef.update({ climax_result: null });
+        }
       };
     }
 
