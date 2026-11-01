@@ -37,7 +37,6 @@
       touch-action: none;
     }
 
-    /* CRT OVERLAY */
     .crt-overlay {
       position: fixed;
       inset: 0;
@@ -48,7 +47,6 @@
       z-index: 500;
     }
 
-    /* HEADER */
     header {
       background: var(--panel);
       border: 1px solid #1e293b;
@@ -77,7 +75,6 @@
       letter-spacing: 2px;
     }
 
-    /* INDICADORES DOS 5 PORTÕES (GATES) */
     .gates-bar {
       display: grid;
       grid-template-columns: repeat(5, 1fr);
@@ -115,7 +112,6 @@
       color: var(--green);
     }
 
-    /* ARENA TÁTIL DE SWIPE (VALVE PAD) */
     #swipeArena {
       flex: 1;
       margin: 14px 0;
@@ -140,7 +136,6 @@
       z-index: 25;
     }
 
-    /* GUIAS CARDINAIS NO FUNDO DO PAD */
     .dir-marker {
       position: absolute;
       font-size: 0.75rem;
@@ -173,7 +168,6 @@
       letter-spacing: 1.5px;
     }
 
-    /* RODAPÉ DE TELEMETRIA QUÍMICA */
     footer {
       background: var(--panel);
       border: 1px solid #1e293b;
@@ -186,11 +180,10 @@
       z-index: 20;
     }
 
-    /* TELA DE VITÓRIA (DISPERSÃO DO ANTÍGENO) */
     #victoryOverlay {
       position: fixed;
       inset: 0;
-      background: radial-gradient(circle, rgba(16, 185, 129, 0.9) 0%, #022c22 100%);
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.92) 0%, #022c22 100%);
       z-index: 2000;
       display: none;
       flex-direction: column;
@@ -218,7 +211,6 @@
       max-width: 320px;
     }
 
-    /* JUMPSCARE LAYER */
     #mobileJumpscareLayer {
       position: fixed;
       inset: 0;
@@ -239,7 +231,6 @@
 
   <div class="crt-overlay"></div>
 
-  <!-- CABEÇALHO -->
   <header>
     <div>
       <div class="app-title">ANTIGEN DISPERSAL UNIT</div>
@@ -248,7 +239,6 @@
     <div id="climaxTimerBadge">STANDBY</div>
   </header>
 
-  <!-- BARRA DOS 5 PORTÕES DE CONTENÇÃO -->
   <div class="gates-bar">
     <div class="gate-node" id="gate0">
       <span class="gate-label">GATE 01</span>
@@ -272,7 +262,6 @@
     </div>
   </div>
 
-  <!-- ARENA DE SWIPE DIRECIONAL -->
   <div id="swipeArena">
     <div class="dir-marker dir-up">▲ NORTH VALVE (UP)</div>
     <div class="dir-marker dir-down">▼ SOUTH VALVE (DOWN)</div>
@@ -287,25 +276,21 @@
     <canvas id="swipeCanvas"></canvas>
   </div>
 
-  <!-- RODAPÉ -->
   <footer id="footerStatus">
     AWAITING DIRECTIONAL OVERRIDE SEQUENCE...
   </footer>
 
-  <!-- OVERLAY DE VITÓRIA (ANTÍGENO LIBERADO) -->
   <div id="victoryOverlay">
     <div style="font-size: 3.5rem; margin-bottom: 12px;">🧪</div>
     <div class="vic-title">ANTIGEN GATES OPENED</div>
     <div class="vic-sub">PURIFYING AEROSOL DISPERSED ACROSS MONTREAL WARD // WATCH THE CENTRAL MONITOR</div>
   </div>
 
-  <!-- JUMPSCARE LAYER -->
   <div id="mobileJumpscareLayer">
     <video id="mobileJumpscareVideo" playsinline></video>
   </div>
 
   <script>
-    // 1. CREDENCIAIS OFICIAIS DO FIREBASE DO USUÁRIO
     const firebaseConfig = {
       apiKey: "AIzaSyAk-aZpWPXD0za40kDF7kwL9ej3EfaYy6E",
       authDomain: "uptime-halloween-2026.firebaseapp.com",
@@ -321,10 +306,10 @@
     const db = firebase.database();
     const sessionRef = db.ref('montreal_session');
 
-    // 2. SEQUÊNCIA OFICIAL DITADA PELA ECHO (ALEXA)
     const SECRET_SEQUENCE = ["UP", "RIGHT", "DOWN", "LEFT", "UP"];
     let userSequence = [];
     let isUnlocked = false;
+    let lastMobileEventTimestamp = 0;
 
     const swipeArena = document.getElementById('swipeArena');
     const canvas = document.getElementById('swipeCanvas');
@@ -336,7 +321,6 @@
     const mobileJumpscareLayer = document.getElementById('mobileJumpscareLayer');
     const mobileJumpscareVideo = document.getElementById('mobileJumpscareVideo');
 
-    // Ajuste de resolução do Canvas
     function resizeCanvas() {
       canvas.width = swipeArena.clientWidth;
       canvas.height = swipeArena.clientHeight;
@@ -344,25 +328,25 @@
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
-    // 3. SINTETIZADOR DE ÁUDIO NATIVO (ZERO ARQUIVOS EXTERNOS PARA OS BIPS DE VÁLVULA)
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     let audioCtx = null;
 
     function playValveSound(freq, type = "sine", duration = 0.18) {
-      if (!audioCtx) audioCtx = new AudioCtx();
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = type;
-      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-      gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start();
-      osc.stop(audioCtx.currentTime + duration);
+      try {
+        if (!audioCtx) audioCtx = new AudioCtx();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch(e) {}
     }
 
-    // 4. ESCUTA DO FIREBASE (CRONÔMETRO & JUMPSCARES)
     let climaxInterval = null;
     sessionRef.on('value', snap => {
       const data = snap.val();
@@ -375,7 +359,15 @@
         climaxTimerBadge.textContent = data.climax_result === "good" ? "PURIFIED" : "STANDBY";
       }
 
-      if (data.mobile_event && data.mobile_event.active) {
+      if (!data.climax_result && isUnlocked) {
+        // Se o Mestre deu Hard Reset na sala, destrava o app para a próxima turma
+        isUnlocked = false;
+        victoryOverlay.style.display = "none";
+        resetGatesUI();
+      }
+
+      if (data.mobile_event && data.mobile_event.active && data.mobile_event.timestamp !== lastMobileEventTimestamp) {
+        lastMobileEventTimestamp = data.mobile_event.timestamp;
         triggerMobileJumpscare(data.mobile_event.video);
       }
     });
@@ -392,7 +384,6 @@
       }, 1000);
     }
 
-    // 5. CAPTURA DE SWIPE (TOUCH & MOUSE) + RASTRO DE LÂMINA VERDE
     let startX = 0, startY = 0;
     let isDrawing = false;
     let trailPoints = [];
@@ -419,12 +410,10 @@
       const dy = endY - startY;
       const dist = Math.hypot(dx, dy);
 
-      // Limpa o rastro após 150ms
       setTimeout(() => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
       }, 150);
 
-      // Ignora toques curtos acidentais (< 40px)
       if (dist < 40) return;
 
       let dir = "";
@@ -458,7 +447,6 @@
       ctx.restore();
     }
 
-    // Eventos Touch (Smartphone)
     swipeArena.addEventListener('touchstart', e => {
       const rect = swipeArena.getBoundingClientRect();
       startGesture(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top);
@@ -473,7 +461,6 @@
       endGesture(touch.clientX - rect.left, touch.clientY - rect.top);
     });
 
-    // Eventos Mouse (Teste no PC)
     swipeArena.addEventListener('mousedown', e => {
       const rect = swipeArena.getBoundingClientRect();
       startGesture(e.clientX - rect.left, e.clientY - rect.top);
@@ -487,8 +474,16 @@
       endGesture(e.clientX - rect.left, e.clientY - rect.top);
     });
 
-    // 6. VALIDAÇÃO DA SEQUÊNCIA DAS COMPORTAS DE ANTÍGENO
     const dirArrows = { UP: "▲ UP", RIGHT: "► RIGHT", DOWN: "▼ DOWN", LEFT: "◄ LEFT" };
+
+    function resetGatesUI() {
+      userSequence = [];
+      for (let i = 0; i < 5; i++) {
+        const g = document.getElementById(`gate${i}`);
+        g.classList.remove('unlocked', 'error');
+        g.querySelector('.gate-icon').textContent = "🔒";
+      }
+    }
 
     function processSwipeInput(dir) {
       const currentStep = userSequence.length;
@@ -497,26 +492,22 @@
       swipeBigDirection.style.transform = "scale(1.15)";
       setTimeout(() => { swipeBigDirection.style.transform = "scale(1)"; }, 150);
 
-      // Verifica se a direção bate com o passo atual da senha da Echo
       if (dir === SECRET_SEQUENCE[currentStep]) {
         userSequence.push(dir);
         const gateEl = document.getElementById(`gate${currentStep}`);
         gateEl.classList.add('unlocked');
         gateEl.querySelector('.gate-icon').textContent = dirArrows[dir].split(' ')[0];
 
-        // Som crescente de destravamento mecânico
         playValveSound(320 + (currentStep * 110), "triangle", 0.2);
         if (navigator.vibrate) navigator.vibrate(70);
 
         footerStatus.textContent = `GATE 0${currentStep + 1} UNLOCKED // KEEP SWIPING...`;
         footerStatus.style.color = "var(--green)";
 
-        // Se destravou o 5º e último portão -> VITÓRIA!
         if (userSequence.length === SECRET_SEQUENCE.length) {
           triggerAntigenVictory();
         }
       } else {
-        // Erro na sequência: pisca vermelho e reseta os portões
         playValveSound(140, "sawtooth", 0.35);
         if (navigator.vibrate) navigator.vibrate([150, 80, 150]);
 
@@ -535,7 +526,6 @@
       }
     }
 
-    // 7. DISPARO DO GOOD ENDING NO FIREBASE
     function triggerAntigenVictory() {
       isUnlocked = true;
       playValveSound(880, "sine", 0.6);
@@ -543,7 +533,6 @@
 
       victoryOverlay.style.display = "flex";
 
-      // Grava a vitória no Firebase para a TV Samsung DeX tocar COMPLETE_VICTORY_ELLIE.mp4!
       sessionRef.update({
         climax_result: "good",
         countdown_active: false,
@@ -552,7 +541,6 @@
       });
     }
 
-    // 8. JUMPSCARE RECEIVER
     function triggerMobileJumpscare(videoFile) {
       mobileJumpscareVideo.src = encodeURI("media/" + videoFile);
       mobileJumpscareLayer.style.display = "flex";
