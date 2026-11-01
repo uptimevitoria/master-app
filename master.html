@@ -10,13 +10,14 @@
 
   <style>
     :root {
-      --bg: #090c10;
-      --panel: #121820;
-      --border: #222e3d;
+      --bg: #070a0e;
+      --panel: #10161f;
+      --border: #1e293b;
       --accent-green: #10b981;
       --accent-red: #ef4444;
       --accent-amber: #f59e0b;
       --accent-cyan: #06b6d4;
+      --accent-purple: #8b5cf6;
       --text: #f1f5f9;
       --text-dim: #94a3b8;
       --font-mono: 'Courier New', Courier, monospace;
@@ -45,7 +46,7 @@
       justify-content: space-between;
       align-items: center;
       flex-wrap: wrap;
-      gap: 10px;
+      gap: 12px;
     }
 
     h1 {
@@ -58,13 +59,14 @@
     .badge {
       font-family: var(--font-mono);
       font-size: 0.75rem;
-      padding: 4px 10px;
+      padding: 5px 12px;
       border-radius: 4px;
       font-weight: bold;
       letter-spacing: 1px;
     }
     .badge-online { background: rgba(16, 185, 129, 0.15); color: var(--accent-green); border: 1px solid var(--accent-green); }
     .badge-hunting { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); border: 1px solid var(--accent-red); animation: pulse 1s infinite; }
+    .badge-test { background: rgba(139, 92, 246, 0.2); color: var(--accent-purple); border: 1px solid var(--accent-purple); }
 
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 
@@ -121,7 +123,7 @@
 
     .btn-group {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(75px, 1fr));
       gap: 8px;
     }
     button {
@@ -145,6 +147,10 @@
     .btn-green:hover { background: #047857; }
     .btn-amber { background: #78350f; border-color: var(--accent-amber); color: #fde68a; }
     .btn-amber:hover { background: #92400e; }
+    .btn-purple { background: #4c1d95; border-color: var(--accent-purple); color: #ddd6fe; }
+    .btn-purple:hover { background: #5b21b6; }
+    .btn-cyan { background: #0e7490; border-color: var(--accent-cyan); color: #cffafe; }
+    .btn-cyan:hover { background: #155e75; }
 
     select {
       background: #090c10;
@@ -169,6 +175,18 @@
       overflow-y: auto;
       line-height: 1.4;
     }
+
+    .health-status-box {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      background: #090d14;
+      border: 1px dashed var(--border);
+      padding: 10px;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+    }
   </style>
 </head>
 <body>
@@ -176,15 +194,37 @@
   <header>
     <div>
       <h1>CONTROL TERMINAL // MONTREAL WARD</h1>
-      <p style="font-size: 0.75rem; color: var(--text-dim); margin-top: 2px;">PROCEDURAL HORROR ORCHESTRATOR</p>
+      <p style="font-size: 0.75rem; color: var(--text-dim); margin-top: 2px;">PROCEDURAL & DIAGNOSTIC ORCHESTRATOR</p>
     </div>
-    <div style="display: flex; gap: 10px; align-items: center;">
+    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
       <span class="badge badge-online" id="statusBadge">STATUS: IDLE</span>
-      <button class="btn-amber" id="btnToggleEngine">ENGINE: ATIVA</button>
+      <button class="btn-purple" id="btnEnvironment" onclick="toggleEnvironment()">AMBIENTE: ESCOLA (LIVE)</button>
+      <button class="btn-amber" id="btnMode" onclick="toggleGameMode()">MODO: PROCEDURAL</button>
     </div>
   </header>
 
   <div class="grid">
+
+    <!-- CARD 0: DIAGNÓSTICO DO ECOSSISTEMA (ALL UP AND RUNNING) -->
+    <div class="card">
+      <h2>🩺 DIAGNÓSTICO // HEALTH CHECK</h2>
+      
+      <div class="health-status-box">
+        <div id="hcFirebase">🌐 Firebase Realtime: AGUARDANDO TESTE</div>
+        <div id="hcTv">📺 Samsung DeX TV: AGUARDANDO TESTE</div>
+        <div id="hcTotem">📍 Totem Ativo: Sincronizando...</div>
+        <div id="hcLatency">⚡ Latência: -- ms</div>
+      </div>
+
+      <button class="btn-green" style="padding: 12px;" onclick="runHealthCheck()">
+        🔍 EXECUTAR DIAGNÓSTICO GERAL (HEALTH CHECK)
+      </button>
+
+      <div class="btn-group">
+        <button onclick="resetGameSession()" class="btn-red">⚠️ HARD RESET SESSÃO</button>
+        <button onclick="clearSingleFlags()" class="btn-amber">RESET TRAVAS/ROTEADOR</button>
+      </div>
+    </div>
 
     <!-- CARD 1: MEDIDOR DE HATE & CAÇADA -->
     <div class="card">
@@ -247,20 +287,17 @@
       </div>
     </div>
 
-    <!-- CARD 3: TOTEM ATIVO & DISPAROS ESPECIAIS -->
+    <!-- CARD 3: TOTEM ATIVO & CUTSCENES -->
     <div class="card">
       <h2>📍 ANCORAGEM & CUTSCENES</h2>
       
       <div style="display: flex; flex-direction: column; gap: 6px;">
-        <label style="font-size: 0.75rem; color: var(--text-dim);">TOTEM ATUAL DA IREENA:</label>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <label style="font-size: 0.75rem; color: var(--text-dim);">TOTEM ATIVO DA IREENA:</label>
+          <span id="totemContextBadge" style="font-size: 0.65rem; color: var(--accent-purple); font-weight: bold;">TABELA ESCOLA</span>
+        </div>
         <select id="totemSelect" onchange="changeTotem(this.value)">
-          <option value="tv">TV (Sala Montreal - Central)</option>
-          <option value="skull">Caveira (Ellie - Mesa)</option>
-          <option value="wifi">Roteador Wi-Fi (Vincent)</option>
-          <option value="mannequin">Manequim (Vestidos)</option>
-          <option value="mummy">Múmia (Ponto Secundário)</option>
-          <option value="spider">Aranha Mutante</option>
-          <option value="outside">Portas de Vidro (Wander)</option>
+          <!-- Opções populadas dinamicamente via JS de acordo com Modo Escola / Casa -->
         </select>
       </div>
 
@@ -338,10 +375,31 @@
 
     // Estado Local
     let currentHate = 30;
-    let engineActive = true;
+    let isTestMode = false;      // false = Escola, true = Casa
+    let isProceduralMode = true; // true = IA viva/relógio, false = Estático/Scriptado
     let nextCheckSeconds = 300;
     let gracePeriod = false;
     let huntingActive = false;
+    let currentTotemValue = "tv";
+
+    // Definição das Tabelas de Totens
+    const schoolTotems = [
+      { id: "tv", label: "TV (Sala Montreal - Central)" },
+      { id: "skull", label: "Caveira (Ellie - Mesa)" },
+      { id: "wifi", label: "Roteador Wi-Fi (Vincent)" },
+      { id: "mannequin", label: "Manequim (Vestidos)" },
+      { id: "mummy", label: "Múmia (Janela)" },
+      { id: "spider", label: "Aranha Gigante (Parede)" },
+      { id: "outside", label: "Portas de Vidro (Wander)" }
+    ];
+
+    const homeTestTotems = [
+      { id: "fan", label: "Ventilador (Fan - Ireena Idle)" },
+      { id: "chair", label: "Cadeira Azul-Escura (Ellie)" },
+      { id: "tv", label: "Televisão de Casa (Vincent)" },
+      { id: "table", label: "Mesa de Vidro (Ireena Wander 1)" },
+      { id: "tree", label: "Árvore de Natal (Ireena Wander 2)" }
+    ];
 
     // Baralhos de Vídeo sem Repetição Imediata
     const mobileDeckPriority = ["Vertical-Jumpscare 6 - BEST.mp4", "Vertical-Jumpscare 7 - BEST.mp4"];
@@ -358,14 +416,82 @@
       log.innerHTML = `<div>[${time}] ${msg}</div>` + log.innerHTML;
     }
 
-    // Inicialização do Banco
+    // Popula o Dropdown de Totens de Acordo com o Ambiente
+    function renderTotemDropdown() {
+      const select = document.getElementById('totemSelect');
+      const badge = document.getElementById('totemContextBadge');
+      select.innerHTML = "";
+
+      const activeList = isTestMode ? homeTestTotems : schoolTotems;
+      badge.textContent = isTestMode ? "TABELA CASA (TESTE)" : "TABELA ESCOLA (LIVE)";
+      badge.style.color = isTestMode ? "var(--accent-purple)" : "var(--accent-green)";
+
+      activeList.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t.id;
+        opt.textContent = t.label;
+        select.appendChild(opt);
+      });
+
+      // Se o totem anterior existir na nova lista, mantém; senão coloca o primeiro
+      const exists = activeList.some(t => t.id === currentTotemValue);
+      if (exists) {
+        select.value = currentTotemValue;
+      } else {
+        currentTotemValue = activeList[0].id;
+        select.value = currentTotemValue;
+        sessionRef.update({ totem: currentTotemValue });
+      }
+    }
+
+    // Alternar Ambiente (Escola vs Casa)
+    function toggleEnvironment() {
+      isTestMode = !isTestMode;
+      sessionRef.update({ test_mode: isTestMode });
+      updateEnvButtonUI();
+      renderTotemDropdown();
+      logMsg(isTestMode ? "🏠 MODO TESTE EM CASA ATIVADO (Totens Domésticos Carregados)" : "🏫 MODO ESCOLA LIVE ATIVADO (Totens de Montreal Carregados)");
+    }
+
+    function updateEnvButtonUI() {
+      const btn = document.getElementById('btnEnvironment');
+      if (isTestMode) {
+        btn.textContent = "AMBIENTE: CASA (TESTE)";
+        btn.className = "btn-purple";
+      } else {
+        btn.textContent = "AMBIENTE: ESCOLA (LIVE)";
+        btn.className = "btn-green";
+      }
+    }
+
+    // Alternar Modo de Jogo (Procedural vs Normal)
+    function toggleGameMode() {
+      isProceduralMode = !isProceduralMode;
+      sessionRef.update({ game_mode: isProceduralMode ? "procedural" : "normal" });
+      updateModeButtonUI();
+      logMsg(isProceduralMode ? "🎲 MODO PROCEDURAL ATIVADO (Relógio & Dados Vivos)" : "🔒 MODO NORMAL ATIVADO (Pistas Estáticas / Sem Surpresas)");
+    }
+
+    function updateModeButtonUI() {
+      const btn = document.getElementById('btnMode');
+      if (isProceduralMode) {
+        btn.textContent = "MODO: PROCEDURAL";
+        btn.className = "btn-amber";
+        document.getElementById('pgTimerDisplay').parentElement.style.opacity = "1";
+      } else {
+        btn.textContent = "MODO: NORMAL (ESTÁTICO)";
+        btn.className = "btn-cyan";
+        document.getElementById('pgTimerDisplay').parentElement.style.opacity = "0.4";
+      }
+    }
+
+    // Inicialização da Sessão
     sessionRef.update({
       initialized: true,
-      totem: "tv",
       spirit_box_cooldown: false
     });
 
-    // Ouvinte em Tempo Real
+    // Ouvinte em Tempo Real do Firebase
     sessionRef.on('value', snap => {
       const val = snap.val();
       if (!val) return;
@@ -377,8 +503,24 @@
         updateTelemetryCalculations();
       }
 
+      if (val.test_mode !== undefined && val.test_mode !== isTestMode) {
+        isTestMode = val.test_mode;
+        updateEnvButtonUI();
+        renderTotemDropdown();
+      }
+
+      if (val.game_mode !== undefined) {
+        const proc = (val.game_mode === "procedural");
+        if (proc !== isProceduralMode) {
+          isProceduralMode = proc;
+          updateModeButtonUI();
+        }
+      }
+
       if (val.totem) {
-        document.getElementById('totemSelect').value = val.totem;
+        currentTotemValue = val.totem;
+        document.getElementById('totemSelect').value = currentTotemValue;
+        document.getElementById('hcTotem').textContent = `📍 Totem Ativo: ${currentTotemValue.toUpperCase()}`;
       }
 
       huntingActive = (val.status === 'hunting');
@@ -387,10 +529,38 @@
         badge.className = "badge badge-hunting";
         badge.textContent = "STATUS: HUNTING ACTIVE!";
       } else {
-        badge.className = "badge badge-online";
+        badge.className = isTestMode ? "badge badge-test" : "badge badge-online";
         badge.textContent = `STATUS: ${val.status ? val.status.toUpperCase() : 'IDLE'}`;
       }
     });
+
+    // Diagnóstico Geral (Health Check)
+    function runHealthCheck() {
+      logMsg("🩺 Iniciando Diagnóstico do Ecossistema...");
+      const startPing = Date.now();
+
+      // Teste Firebase RTDB
+      sessionRef.child('health_ping').set(startPing).then(() => {
+        const latency = Date.now() - startPing;
+        document.getElementById('hcFirebase').innerHTML = `🌐 Firebase Realtime: <span style="color: var(--accent-green)">ONLINE</span>`;
+        document.getElementById('hcLatency').textContent = `⚡ Latência: ${latency} ms`;
+        logMsg(`✅ Firebase online (latência: ${latency}ms)`);
+      }).catch(err => {
+        document.getElementById('hcFirebase').innerHTML = `🌐 Firebase Realtime: <span style="color: var(--accent-red)">ERRO (${err.message})</span>`;
+      });
+
+      // Teste TV DeX Heartbeat
+      db.ref('montreal_session/tv_status').once('value').then(snap => {
+        const tvData = snap.val();
+        if (tvData && tvData.last_ping && (Date.now() - tvData.last_ping < 12000)) {
+          document.getElementById('hcTv').innerHTML = `📺 Samsung DeX TV: <span style="color: var(--accent-green)">CONECTADA & SINTONIZADA</span>`;
+          logMsg("✅ TV Samsung DeX respondendo ao sinal de presença.");
+        } else {
+          document.getElementById('hcTv').innerHTML = `📺 Samsung DeX TV: <span style="color: var(--accent-amber)">OFFLINE / AGUARDANDO DESTRAVAMENTO</span>`;
+          logMsg("⚠️ TV Samsung DeX não respondeu nos últimos 12 segundos. Certifique-se de que tv.html está aberta!");
+        }
+      });
+    }
 
     // Controles de Hate
     const hateSlider = document.getElementById('hateSlider');
@@ -411,17 +581,16 @@
     }
 
     function changeTotem(totem) {
+      currentTotemValue = totem;
       sessionRef.update({ totem: totem });
       logMsg(`Totem ativo mudou para: ${totem}`);
     }
 
     // Cálculos da PG e Chances
     function updateTelemetryCalculations() {
-      // PG contínua: de 300s (5min) a 60s (1min) no 99%
       nextCheckSeconds = Math.round(300 * Math.pow(0.2, currentHate / 100));
       document.getElementById('pgTimerDisplay').textContent = `${nextCheckSeconds}s`;
 
-      // Chance de Caçada (80% a 100%)
       let huntChance = 0;
       if (currentHate >= 100) huntChance = 100;
       else if (currentHate >= 95) huntChance = 85;
@@ -432,9 +601,9 @@
       document.getElementById('huntChanceDisplay').textContent = `${huntChance}%`;
     }
 
-    // Loop Procedural (Executa a cada segundo para controlar o relógio)
-    let proceduralTicker = setInterval(() => {
-      if (!engineActive || gracePeriod || huntingActive) return;
+    // Loop Procedural (Só roda se Modo Procedural estiver ativo)
+    setInterval(() => {
+      if (!isProceduralMode || gracePeriod || huntingActive) return;
 
       nextCheckSeconds--;
       document.getElementById('pgTimerDisplay').textContent = `${nextCheckSeconds}s`;
@@ -448,7 +617,7 @@
     function runProceduralRoll() {
       logMsg(`🎲 Rolando dados procedurais com Hate em ${currentHate}%...`);
 
-      // 1. Checagem de Caçada (Se Hate >= 80%)
+      // 1. Checagem de Caçada
       if (currentHate >= 80) {
         let huntChance = 0;
         if (currentHate >= 100) huntChance = 1.0;
@@ -464,14 +633,13 @@
         }
       }
 
-      // 2. Checagem de Ghost Event (Se não caçou)
+      // 2. Checagem de Ghost Event
       let eventChance = 0.40;
-      if (currentHate >= 70) eventChance = 0.70; // Exatamente os seus 70% no topo
+      if (currentHate >= 70) eventChance = 0.70;
       else if (currentHate >= 40) eventChance = 0.55;
 
       if (Math.random() <= eventChance) {
-        logMsg(`👻 Ghost Event procedural aprovado! Sorteando mídia...`);
-        // Alterna entre susto Mobile e susto de TV
+        logMsg(`👻 Ghost Event procedural sorteado!`);
         if (Math.random() < 0.5) {
           fireNextMobileDeck();
         } else {
@@ -479,7 +647,6 @@
         }
       } else {
         logMsg(`🍃 Silêncio atmosférico mantido (Dado falhou de propósito).`);
-        // Toca apenas som atmosférico sutil
         sessionRef.update({
           ambient_sfx: currentHate >= 50 ? "Hissing 1.mp3" : "Whispers 1.mp3",
           sfx_trigger: Date.now()
@@ -487,23 +654,17 @@
       }
     }
 
-    // Sorteio de Baralho Mobile Sem Repetição
     function fireNextMobileDeck() {
       if (currentMobileDeck.length === 0) {
         currentMobileDeck = [...mobileDeckPriority, ...mobileDeckRemaining];
       }
       const video = currentMobileDeck.shift();
       sessionRef.update({
-        mobile_event: {
-          active: true,
-          video: video,
-          timestamp: Date.now()
-        }
+        mobile_event: { active: true, video: video, timestamp: Date.now() }
       });
       logMsg(`📱 Disparado Mobile Event: ${video}`);
     }
 
-    // Sorteio de Baralho TV por Faixa de Hate
     function fireNextTvDeck() {
       let pool = tvLowDeck;
       if (currentHate >= 70) pool = tvHighDeck;
@@ -511,11 +672,7 @@
 
       const video = pool[Math.floor(Math.random() * pool.length)];
       sessionRef.update({
-        tv_event: {
-          active: true,
-          video: video,
-          timestamp: Date.now()
-        }
+        tv_event: { active: true, video: video, timestamp: Date.now() }
       });
       logMsg(`📺 Disparado TV Event: ${video}`);
     }
@@ -524,11 +681,7 @@
     function fireMobileEventManual() {
       const video = document.getElementById('mobileVideoSelect').value;
       sessionRef.update({
-        mobile_event: {
-          active: true,
-          video: video,
-          timestamp: Date.now()
-        }
+        mobile_event: { active: true, video: video, timestamp: Date.now() }
       });
       logMsg(`📱 Disparo Manual Mobile: ${video}`);
     }
@@ -536,27 +689,19 @@
     function fireTvEventManual() {
       const video = document.getElementById('tvVideoSelect').value;
       sessionRef.update({
-        tv_event: {
-          active: true,
-          video: video,
-          timestamp: Date.now()
-        }
+        tv_event: { active: true, video: video, timestamp: Date.now() }
       });
       logMsg(`📺 Disparo Manual TV: ${video}`);
     }
 
     function triggerCutscene(videoName) {
       sessionRef.update({
-        tv_event: {
-          active: true,
-          video: videoName,
-          timestamp: Date.now()
-        }
+        tv_event: { active: true, video: videoName, timestamp: Date.now() }
       });
       logMsg(`🎬 Cutscene executada na TV: ${videoName}`);
     }
 
-    // Mecânica de Caçada
+    // Caçada
     function triggerHuntManual() {
       huntingActive = true;
       sessionRef.update({
@@ -565,10 +710,9 @@
       });
       logMsg(`🚨 CAÇADA INICIADA (Música + Loops de 1 minuto)`);
 
-      // Timer de 60 segundos de Caçada
       setTimeout(() => {
         if (huntingActive) {
-          logMsg(`⌛ Caçada completou 1 minuto sem defesa. Aplicando castigo.`);
+          logMsg(`⌛ Caçada completou 1 minuto. Encerrando crise.`);
           cancelHuntEmergency();
         }
       }, 60000);
@@ -577,20 +721,14 @@
     function triggerShieldWin() {
       huntingActive = false;
       gracePeriod = true;
-      setHate(40); // Baixa Hate pós-escudo
+      setHate(40);
 
-      // Dispara o Glitch do Vincent imediatamente na TV
       sessionRef.update({
         status: "vincent_glitch",
-        tv_event: {
-          active: true,
-          video: "Vincent-Glitch.mp4",
-          timestamp: Date.now()
-        }
+        tv_event: { active: true, video: "Vincent-Glitch.mp4", timestamp: Date.now() }
       });
       logMsg(`🛡️ GHOST SHIELD DEFECT: Vincent assumiu a TV! Hate derrubado para 40%.`);
 
-      // 2 minutos de calmaria garantida (Grace Period)
       setTimeout(() => {
         gracePeriod = false;
         logMsg(`🍃 Período de graça pós-caçada encerrado.`);
@@ -603,7 +741,7 @@
       logMsg(`⏹️ Caçada encerrada.`);
     }
 
-    // Clímax Final
+    // Clímax
     function startClimaxCountdown() {
       sessionRef.update({
         countdown_active: true,
@@ -621,14 +759,35 @@
       logMsg(`🏁 Fim de Jogo declarado: ${res.toUpperCase()}`);
     }
 
-    // Botão Liga/Desliga Engine
-    document.getElementById('btnToggleEngine').addEventListener('click', function() {
-      engineActive = !engineActive;
-      this.textContent = engineActive ? "ENGINE: ATIVA" : "ENGINE: PAUSADA";
-      this.className = engineActive ? "btn-amber" : "btn-red";
-      logMsg(engineActive ? "Engine procedural ativada." : "Engine pausada pelo Game Master.");
-    });
+    // Resets Administrativos
+    function resetGameSession() {
+      if (!confirm("Tem certeza que deseja resetar todo o estado da Sala Montreal?")) return;
+      sessionRef.set({
+        hate: 30,
+        status: "idle",
+        totem: isTestMode ? "fan" : "tv",
+        test_mode: isTestMode,
+        game_mode: isProceduralMode ? "procedural" : "normal",
+        spirit_box_busy: false,
+        countdown_active: false,
+        vincent_done: false,
+        climax_result: null
+      });
+      logMsg("🔄 HARD RESET: Sessão restaurada para parâmetros iniciais.");
+    }
 
+    function clearSingleFlags() {
+      sessionRef.update({
+        vincent_done: false,
+        spirit_box_busy: false
+      });
+      logMsg("🔓 Travas de uso único (Vincent/Roteador & Spirit Box) liberadas.");
+    }
+
+    // Inicialização
+    renderTotemDropdown();
+    updateEnvButtonUI();
+    updateModeButtonUI();
     updateTelemetryCalculations();
   </script>
 </body>
