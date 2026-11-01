@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ANTIGEN CONTROL // GATE OVERRIDE</title>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <style>
+    :root {
+      --bg: #040806;
+      --panel: #0b1410;
+      --green: #10b981;
+      --green-glow: rgba(16, 185, 129, 0.5);
+      --red: #ef4444;
+      --cyan: #38bdf8;
+      --amber: #f59e0b;
+      --font-mono: 'Courier New', Courier, monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+
+    body {
+      background: var(--bg);
+      color: #cbd5e1;
+      font-family: var(--font-mono);
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 16px;
+      position: relative;
+      touch-action: none;
+    }
+
+    /* CRT OVERLAY */
+    .crt-overlay {
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.35) 50%),
+                  linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
+      background-size: 100% 4px, 6px 100%;
+      pointer-events: none;
+      z-index: 500;
+    }
+
+    /* HEADER */
+    header {
+      background: var(--panel);
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 12px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 20;
+    }
+    .app-title {
+      font-size: 0.9rem;
+      font-weight: bold;
+      color: var(--green);
+      letter-spacing: 2px;
+    }
+    .sub-title {
+      font-size: 0.65rem;
+      color: #64748b;
+      margin-top: 2px;
+    }
+    #climaxTimerBadge {
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: var(--amber);
+      letter-spacing: 2px;
+    }
+
+    /* INDICADORES DOS 5 PORTÕES (GATES) */
+    .gates-bar {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      z-index: 20;
+    }
+    .gate-node {
+      background: #090e0c;
+      border: 1px solid #1e293b;
+      border-radius: 6px;
+      padding: 10px 4px;
+      text-align: center;
+      transition: all 0.25s ease;
+    }
+    .gate-node.unlocked {
+      background: rgba(16, 185, 129, 0.2);
+      border-color: var(--green);
+      box-shadow: 0 0 12px var(--green-glow);
+      color: #fff;
+    }
+    .gate-node.error {
+      background: rgba(239, 68, 68, 0.25);
+      border-color: var(--red);
+      box-shadow: 0 0 12px rgba(239, 68, 68, 0.5);
+    }
+    .gate-label {
+      font-size: 0.6rem;
+      color: #64748b;
+      display: block;
+      margin-bottom: 4px;
+    }
+    .gate-icon {
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: var(--green);
+    }
+
+    /* ARENA TÁTIL DE SWIPE (VALVE PAD) */
+    #swipeArena {
+      flex: 1;
+      margin: 14px 0;
+      background: radial-gradient(circle at center, #0d1914 0%, #030605 100%);
+      border: 2px solid #1e293b;
+      border-radius: 12px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.9);
+      z-index: 20;
+    }
+
+    #swipeCanvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 25;
+    }
+
+    /* GUIAS CARDINAIS NO FUNDO DO PAD */
+    .dir-marker {
+      position: absolute;
+      font-size: 0.75rem;
+      color: rgba(16, 185, 129, 0.25);
+      letter-spacing: 2px;
+      pointer-events: none;
+    }
+    .dir-up { top: 14px; }
+    .dir-down { bottom: 14px; }
+    .dir-left { left: 14px; writing-mode: vertical-rl; transform: rotate(180deg); }
+    .dir-right { right: 14px; writing-mode: vertical-rl; }
+
+    .center-prompt {
+      pointer-events: none;
+      text-align: center;
+      z-index: 22;
+      padding: 20px;
+    }
+    #swipeBigDirection {
+      font-size: 2.2rem;
+      font-weight: bold;
+      color: rgba(16, 185, 129, 0.35);
+      letter-spacing: 4px;
+      margin-bottom: 8px;
+      transition: transform 0.15s ease;
+    }
+    #swipeInstruction {
+      font-size: 0.75rem;
+      color: #64748b;
+      letter-spacing: 1.5px;
+    }
+
+    /* RODAPÉ DE TELEMETRIA QUÍMICA */
+    footer {
+      background: var(--panel);
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+      font-size: 0.75rem;
+      color: #94a3b8;
+      letter-spacing: 1px;
+      z-index: 20;
+    }
+
+    /* TELA DE VITÓRIA (DISPERSÃO DO ANTÍGENO) */
+    #victoryOverlay {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.9) 0%, #022c22 100%);
+      z-index: 2000;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 24px;
+      animation: fadeIn 0.5s ease forwards;
+    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    .vic-title {
+      font-size: 1.6rem;
+      font-weight: bold;
+      color: #fff;
+      letter-spacing: 3px;
+      text-shadow: 0 0 20px #fff;
+      margin-bottom: 12px;
+    }
+    .vic-sub {
+      font-size: 0.9rem;
+      color: #a7f3d0;
+      letter-spacing: 2px;
+      line-height: 1.5;
+      max-width: 320px;
+    }
+
+    /* JUMPSCARE LAYER */
+    #mobileJumpscareLayer {
+      position: fixed;
+      inset: 0;
+      background: #000;
+      z-index: 10000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    #mobileJumpscareVideo {
+      width: 100vw;
+      height: 100vh;
+      object-fit: cover;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="crt-overlay"></div>
+
+  <!-- CABEÇALHO -->
+  <header>
+    <div>
+      <div class="app-title">ANTIGEN DISPERSAL UNIT</div>
+      <div class="sub-title">BIO-CONTAMINATION VENTILATION GATES</div>
+    </div>
+    <div id="climaxTimerBadge">STANDBY</div>
+  </header>
+
+  <!-- BARRA DOS 5 PORTÕES DE CONTENÇÃO -->
+  <div class="gates-bar">
+    <div class="gate-node" id="gate0">
+      <span class="gate-label">GATE 01</span>
+      <span class="gate-icon">🔒</span>
+    </div>
+    <div class="gate-node" id="gate1">
+      <span class="gate-label">GATE 02</span>
+      <span class="gate-icon">🔒</span>
+    </div>
+    <div class="gate-node" id="gate2">
+      <span class="gate-label">GATE 03</span>
+      <span class="gate-icon">🔒</span>
+    </div>
+    <div class="gate-node" id="gate3">
+      <span class="gate-label">GATE 04</span>
+      <span class="gate-icon">🔒</span>
+    </div>
+    <div class="gate-node" id="gate4">
+      <span class="gate-label">GATE 05</span>
+      <span class="gate-icon">🔒</span>
+    </div>
+  </div>
+
+  <!-- ARENA DE SWIPE DIRECIONAL -->
+  <div id="swipeArena">
+    <div class="dir-marker dir-up">▲ NORTH VALVE (UP)</div>
+    <div class="dir-marker dir-down">▼ SOUTH VALVE (DOWN)</div>
+    <div class="dir-marker dir-left">◄ WEST VALVE</div>
+    <div class="dir-marker dir-right">► EAST VALVE</div>
+
+    <div class="center-prompt">
+      <div id="swipeBigDirection">SWIPE</div>
+      <div id="swipeInstruction">SLIDE FINGER IN THE ECHO PROTOCOL SEQUENCE TO UNLOCK ANTIGEN GATES</div>
+    </div>
+
+    <canvas id="swipeCanvas"></canvas>
+  </div>
+
+  <!-- RODAPÉ -->
+  <footer id="footerStatus">
+    AWAITING DIRECTIONAL OVERRIDE SEQUENCE...
+  </footer>
+
+  <!-- OVERLAY DE VITÓRIA (ANTÍGENO LIBERADO) -->
+  <div id="victoryOverlay">
+    <div style="font-size: 3.5rem; margin-bottom: 12px;">🧪</div>
+    <div class="vic-title">ANTIGEN GATES OPENED</div>
+    <div class="vic-sub">PURIFYING AEROSOL DISPERSED ACROSS MONTREAL WARD // WATCH THE CENTRAL MONITOR</div>
+  </div>
+
+  <!-- JUMPSCARE LAYER -->
+  <div id="mobileJumpscareLayer">
+    <video id="mobileJumpscareVideo" playsinline></video>
+  </div>
+
+  <script>
+    // 1. CREDENCIAIS OFICIAIS DO FIREBASE DO USUÁRIO
+    const firebaseConfig = {
+      apiKey: "AIzaSyAk-aZpWPXD0za40kDF7kwL9ej3EfaYy6E",
+      authDomain: "uptime-halloween-2026.firebaseapp.com",
+      databaseURL: "https://uptime-halloween-2026-default-rtdb.firebaseio.com",
+      projectId: "uptime-halloween-2026",
+      storageBucket: "uptime-halloween-2026.firebasestorage.app",
+      messagingSenderId: "1020945901960",
+      appId: "1:1020945901960:web:5040ae103b7dc347c9723d",
+      measurementId: "G-8MPM67BSLB"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const sessionRef = db.ref('montreal_session');
+
+    // 2. SEQUÊNCIA OFICIAL DITADA PELA ECHO (ALEXA)
+    const SECRET_SEQUENCE = ["UP", "RIGHT", "DOWN", "LEFT", "UP"];
+    let userSequence = [];
+    let isUnlocked = false;
+
+    const swipeArena = document.getElementById('swipeArena');
+    const canvas = document.getElementById('swipeCanvas');
+    const ctx = canvas.getContext('2d');
+    const swipeBigDirection = document.getElementById('swipeBigDirection');
+    const footerStatus = document.getElementById('footerStatus');
+    const victoryOverlay = document.getElementById('victoryOverlay');
+    const climaxTimerBadge = document.getElementById('climaxTimerBadge');
+    const mobileJumpscareLayer = document.getElementById('mobileJumpscareLayer');
+    const mobileJumpscareVideo = document.getElementById('mobileJumpscareVideo');
+
+    // Ajuste de resolução do Canvas
+    function resizeCanvas() {
+      canvas.width = swipeArena.clientWidth;
+      canvas.height = swipeArena.clientHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // 3. SINTETIZADOR DE ÁUDIO NATIVO (ZERO ARQUIVOS EXTERNOS PARA OS BIPS DE VÁLVULA)
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+
+    function playValveSound(freq, type = "sine", duration = 0.18) {
+      if (!audioCtx) audioCtx = new AudioCtx();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    }
+
+    // 4. ESCUTA DO FIREBASE (CRONÔMETRO & JUMPSCARES)
+    let climaxInterval = null;
+    sessionRef.on('value', snap => {
+      const data = snap.val();
+      if (!data) return;
+
+      if (data.countdown_active && data.climax_timestamp) {
+        syncClimaxTimer(data.climax_timestamp);
+      } else if (!data.countdown_active) {
+        clearInterval(climaxInterval);
+        climaxTimerBadge.textContent = data.climax_result === "good" ? "PURIFIED" : "STANDBY";
+      }
+
+      if (data.mobile_event && data.mobile_event.active) {
+        triggerMobileJumpscare(data.mobile_event.video);
+      }
+    });
+
+    function syncClimaxTimer(startTime) {
+      clearInterval(climaxInterval);
+      climaxInterval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        const remain = Math.max(0, 300 - elapsed);
+        const m = Math.floor(remain / 60).toString().padStart(2, '0');
+        const s = (remain % 60).toString().padStart(2, '0');
+        climaxTimerBadge.textContent = `⏱️ ${m}:${s}`;
+        climaxTimerBadge.style.color = remain < 60 ? "var(--red)" : "var(--amber)";
+      }, 1000);
+    }
+
+    // 5. CAPTURA DE SWIPE (TOUCH & MOUSE) + RASTRO DE LÂMINA VERDE
+    let startX = 0, startY = 0;
+    let isDrawing = false;
+    let trailPoints = [];
+
+    function startGesture(x, y) {
+      if (isUnlocked) return;
+      isDrawing = true;
+      startX = x;
+      startY = y;
+      trailPoints = [{ x, y }];
+    }
+
+    function moveGesture(x, y) {
+      if (!isDrawing || isUnlocked) return;
+      trailPoints.push({ x, y });
+      drawBladeTrail();
+    }
+
+    function endGesture(endX, endY) {
+      if (!isDrawing || isUnlocked) return;
+      isDrawing = false;
+
+      const dx = endX - startX;
+      const dy = endY - startY;
+      const dist = Math.hypot(dx, dy);
+
+      // Limpa o rastro após 150ms
+      setTimeout(() => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }, 150);
+
+      // Ignora toques curtos acidentais (< 40px)
+      if (dist < 40) return;
+
+      let dir = "";
+      if (Math.abs(dx) > Math.abs(dy)) {
+        dir = dx > 0 ? "RIGHT" : "LEFT";
+      } else {
+        dir = dy > 0 ? "DOWN" : "UP";
+      }
+
+      processSwipeInput(dir);
+    }
+
+    function drawBladeTrail() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (trailPoints.length < 2) return;
+
+      ctx.save();
+      ctx.strokeStyle = "#10b981";
+      ctx.lineWidth = 6;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.shadowColor = "#10b981";
+      ctx.shadowBlur = 15;
+
+      ctx.beginPath();
+      ctx.moveTo(trailPoints[0].x, trailPoints[0].y);
+      for (let i = 1; i < trailPoints.length; i++) {
+        ctx.lineTo(trailPoints[i].x, trailPoints[i].y);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Eventos Touch (Smartphone)
+    swipeArena.addEventListener('touchstart', e => {
+      const rect = swipeArena.getBoundingClientRect();
+      startGesture(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top);
+    });
+    swipeArena.addEventListener('touchmove', e => {
+      const rect = swipeArena.getBoundingClientRect();
+      moveGesture(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top);
+    });
+    swipeArena.addEventListener('touchend', e => {
+      const rect = swipeArena.getBoundingClientRect();
+      const touch = e.changedTouches[0];
+      endGesture(touch.clientX - rect.left, touch.clientY - rect.top);
+    });
+
+    // Eventos Mouse (Teste no PC)
+    swipeArena.addEventListener('mousedown', e => {
+      const rect = swipeArena.getBoundingClientRect();
+      startGesture(e.clientX - rect.left, e.clientY - rect.top);
+    });
+    swipeArena.addEventListener('mousemove', e => {
+      const rect = swipeArena.getBoundingClientRect();
+      moveGesture(e.clientX - rect.left, e.clientY - rect.top);
+    });
+    swipeArena.addEventListener('mouseup', e => {
+      const rect = swipeArena.getBoundingClientRect();
+      endGesture(e.clientX - rect.left, e.clientY - rect.top);
+    });
+
+    // 6. VALIDAÇÃO DA SEQUÊNCIA DAS COMPORTAS DE ANTÍGENO
+    const dirArrows = { UP: "▲ UP", RIGHT: "► RIGHT", DOWN: "▼ DOWN", LEFT: "◄ LEFT" };
+
+    function processSwipeInput(dir) {
+      const currentStep = userSequence.length;
+      swipeBigDirection.textContent = dirArrows[dir];
+      swipeBigDirection.style.color = "var(--green)";
+      swipeBigDirection.style.transform = "scale(1.15)";
+      setTimeout(() => { swipeBigDirection.style.transform = "scale(1)"; }, 150);
+
+      // Verifica se a direção bate com o passo atual da senha da Echo
+      if (dir === SECRET_SEQUENCE[currentStep]) {
+        userSequence.push(dir);
+        const gateEl = document.getElementById(`gate${currentStep}`);
+        gateEl.classList.add('unlocked');
+        gateEl.querySelector('.gate-icon').textContent = dirArrows[dir].split(' ')[0];
+
+        // Som crescente de destravamento mecânico
+        playValveSound(320 + (currentStep * 110), "triangle", 0.2);
+        if (navigator.vibrate) navigator.vibrate(70);
+
+        footerStatus.textContent = `GATE 0${currentStep + 1} UNLOCKED // KEEP SWIPING...`;
+        footerStatus.style.color = "var(--green)";
+
+        // Se destravou o 5º e último portão -> VITÓRIA!
+        if (userSequence.length === SECRET_SEQUENCE.length) {
+          triggerAntigenVictory();
+        }
+      } else {
+        // Erro na sequência: pisca vermelho e reseta os portões
+        playValveSound(140, "sawtooth", 0.35);
+        if (navigator.vibrate) navigator.vibrate([150, 80, 150]);
+
+        footerStatus.textContent = "⚠️ VALVE SEQUENCE MISMATCH // GATES RESET!";
+        footerStatus.style.color = "var(--red)";
+        swipeBigDirection.style.color = "var(--red)";
+
+        userSequence = [];
+        for (let i = 0; i < 5; i++) {
+          const g = document.getElementById(`gate${i}`);
+          g.classList.remove('unlocked');
+          g.classList.add('error');
+          g.querySelector('.gate-icon').textContent = "🔒";
+          setTimeout(() => g.classList.remove('error'), 500);
+        }
+      }
+    }
+
+    // 7. DISPARO DO GOOD ENDING NO FIREBASE
+    function triggerAntigenVictory() {
+      isUnlocked = true;
+      playValveSound(880, "sine", 0.6);
+      if (navigator.vibrate) navigator.vibrate([100, 50, 200, 50, 500]);
+
+      victoryOverlay.style.display = "flex";
+
+      // Grava a vitória no Firebase para a TV Samsung DeX tocar COMPLETE_VICTORY_ELLIE.mp4!
+      sessionRef.update({
+        climax_result: "good",
+        countdown_active: false,
+        status: "idle",
+        hate: 0
+      });
+    }
+
+    // 8. JUMPSCARE RECEIVER
+    function triggerMobileJumpscare(videoFile) {
+      mobileJumpscareVideo.src = encodeURI("media/" + videoFile);
+      mobileJumpscareLayer.style.display = "flex";
+      mobileJumpscareVideo.currentTime = 0;
+      mobileJumpscareVideo.play().catch(e => console.log(e));
+
+      if (navigator.vibrate) navigator.vibrate([200, 100, 300, 100, 400]);
+
+      mobileJumpscareVideo.onended = () => {
+        mobileJumpscareLayer.style.display = "none";
+        sessionRef.child('mobile_event').update({ active: false });
+      };
+    }
+  </script>
+</body>
+</html>
