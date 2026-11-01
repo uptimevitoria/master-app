@@ -213,8 +213,8 @@
   <div class="crt-overlay"></div>
 
   <div id="unlockScreen" onclick="unlockSystemAudio()">
-    <h2>[ MONTREAL TERMINAL OFFLINE ]</h2>
-    <p>CLICK TO INITIALIZE DEX SURVEILLANCE & AUDIO DRIVERS</p>
+    <h2>[ MONTREAL TERMINAL STANDBY ]</h2>
+    <p>CLICK ANYWHERE TO ARM CENTRAL SURVEILLANCE & AUDIO DRIVERS</p>
   </div>
 
   <header>
@@ -296,13 +296,15 @@
     let lastSfxTimestamp = Date.now();
     let lastTvEventTimestamp = Date.now();
 
-    setInterval(() => {
+    function sendHeartbeat() {
       db.ref('montreal_session/tv_status').set({
         online: true,
         audio_unlocked: audioUnlocked,
         last_ping: Date.now()
       });
-    }, 4000);
+    }
+    sendHeartbeat();
+    setInterval(sendHeartbeat, 4000);
 
     function getMediaPath(filename) {
       return encodeURI("media/" + filename);
@@ -313,6 +315,10 @@
     function unlockSystemAudio() {
       audioUnlocked = true;
       unlockScreen.style.display = "none";
+
+      // Limpa qualquer resíduo de vitória/derrota antigo que tenha ficado preso antes de armar a TV
+      sessionRef.update({ climax_result: null });
+      sendHeartbeat();
 
       huntingMusic.volume = 0;
       huntingMusic.play().then(() => {
@@ -331,7 +337,6 @@
       const data = snap.val();
       if (!data) return;
 
-      // 0. Se a Chave Geral no Master App estiver em OFF (Estaca Zero)
       if (data.game_power === "off") {
         stopHuntingSequence();
         tvVideo.pause();
@@ -368,13 +373,15 @@
         }
       }
 
+      // Só dispara vídeos e caçadas depois que o professor deu o clique inicial na tela da TV
+      if (!audioUnlocked) return;
+
       if (data.status === "hunting" && !isHunting) {
         startHuntingSequence();
       } else if (data.status !== "hunting" && isHunting) {
         stopHuntingSequence();
       }
 
-      // Ignora vídeos antigos deixados no banco antes da abertura da página
       if (data.tv_event && data.tv_event.active && data.tv_event.timestamp > lastTvEventTimestamp) {
         lastTvEventTimestamp = data.tv_event.timestamp;
         playTvVideo(data.tv_event.video);
@@ -402,11 +409,14 @@
         containmentStatus.className = "readout-line";
         containmentStatus.style.color = "var(--green)";
         emkReading.textContent = "ELECTROMAGNETIC FIELD: 0.0 mG (PURIFIED)";
-        playTvVideo("END-COMPLETE.mp4", true);
+        // Limpa imediatamente no Firebase para nunca repetir se a página for atualizada
+        sessionRef.update({ climax_result: null });
+        playTvVideo("END-COMPLETE.mp4");
       } else if (data.climax_result === "bad" && lastClimaxState !== "bad") {
         lastClimaxState = "bad";
         stopHuntingSequence();
-        playTvVideo("Laugh and Glass Breaking.mp4", true);
+        sessionRef.update({ climax_result: null });
+        playTvVideo("Laugh and Glass Breaking.mp4");
       } else if (!data.climax_result) {
         lastClimaxState = null;
       }
@@ -452,7 +462,7 @@
       huntIntervals = [];
     }
 
-    function playTvVideo(videoFile, clearClimaxAfter = false) {
+    function playTvVideo(videoFile) {
       if (isHunting) huntingMusic.volume = 0.25;
       tvVideo.src = getMediaPath(videoFile);
       videoContainer.style.display = "flex";
@@ -464,10 +474,6 @@
         videoContainer.style.display = "none";
         if (isHunting) huntingMusic.volume = 1.0;
         sessionRef.child('tv_event').update({ active: false });
-        if (clearClimaxAfter) {
-          // Limpa o climax_result após o vídeo terminar para nunca repetir sozinho!
-          sessionRef.update({ climax_result: null });
-        }
       };
     }
 
