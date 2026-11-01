@@ -292,6 +292,15 @@
     const db = firebase.database();
     const sessionRef = db.ref('montreal_session');
 
+    // HEARTBEAT DE DIAGNÓSTICO (Informa ao Master App que a TV está conectada)
+setInterval(() => {
+  db.ref('montreal_session/tv_status').set({
+    online: true,
+    audio_unlocked: audioUnlocked,
+    last_ping: Date.now()
+  });
+}, 4000);
+    
     // Elementos DOM
     const unlockScreen = document.getElementById('unlockScreen');
     const videoContainer = document.getElementById('videoContainer');
