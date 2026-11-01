@@ -35,7 +35,6 @@
       position: relative;
     }
 
-    /* TELA DE AUTOPLAY (PRIMEIRO CLIQUE DIEGÉTICO NO DEX) */
     #unlockScreen {
       position: fixed;
       inset: 0;
@@ -58,7 +57,6 @@
       color: #64748b;
     }
 
-    /* OVERLAY CRT / SCANLINES */
     .crt-overlay {
       position: fixed;
       inset: 0;
@@ -69,7 +67,6 @@
       z-index: 500;
     }
 
-    /* CABEÇALHO DO MONITOR CCTV */
     header {
       padding: 24px 30px;
       display: flex;
@@ -95,7 +92,6 @@
     }
     @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
 
-    /* TELEMETRIA PARANORMAL CENTRAL */
     main {
       flex: 1;
       display: flex;
@@ -144,7 +140,6 @@
       text-shadow: 0 0 10px var(--red-glow);
     }
 
-    /* RODAPÉ DIEGÉTICO */
     footer {
       padding: 20px 30px;
       display: flex;
@@ -155,7 +150,6 @@
       z-index: 10;
     }
 
-    /* VÍDEO FULLSCREEN PLAYER (GHOST EVENTS & CUTSCENES) */
     #videoContainer {
       position: fixed;
       inset: 0;
@@ -171,7 +165,6 @@
       object-fit: cover;
     }
 
-    /* ALERTA VISUAL DE CAÇADA */
     #huntingOverlay {
       position: fixed;
       inset: 0;
@@ -200,7 +193,6 @@
       letter-spacing: 4px;
     }
 
-    /* CRONÔMETRO DE CLÍMAX */
     #climaxBox {
       display: none;
       flex-direction: column;
@@ -220,13 +212,11 @@
 
   <div class="crt-overlay"></div>
 
-  <!-- DESTRAVAMENTO DE ÁUDIO -->
   <div id="unlockScreen" onclick="unlockSystemAudio()">
     <h2>[ MONTREAL TERMINAL OFFLINE ]</h2>
     <p>CLICK TO INITIALIZE DEX SURVEILLANCE & AUDIO DRIVERS</p>
   </div>
 
-  <!-- CABEÇALHO -->
   <header>
     <div class="feed-title">
       <div class="dot-rec"></div>
@@ -235,7 +225,6 @@
     <div id="clockDisplay" style="color: var(--cyan); letter-spacing: 2px;">00:00:00</div>
   </header>
 
-  <!-- CENTRO TELEMÉTRICO -->
   <main id="mainTelemetry">
     <div class="radar-box">
       <div class="radar-sweep"></div>
@@ -248,36 +237,30 @@
       <div class="readout-line" id="containmentStatus">CONTAINMENT MATRIX: STABLE</div>
     </div>
 
-    <!-- CRONÔMETRO FINAL -->
     <div id="climaxBox">
       <div style="font-size: 1.1rem; color: var(--amber); letter-spacing: 3px;">⚠️ CRITICAL PURGE PROTOCOL</div>
       <div id="climaxTimer">05:00</div>
     </div>
   </main>
 
-  <!-- RODAPÉ -->
   <footer>
     <span>UPTIME ACADEMY // ASYLUM NETWORK</span>
     <span id="activeTotemIndicator">ACTIVE TOTEM: TV SCREEN</span>
   </footer>
 
-  <!-- TELA DE CAÇADA (FLASHING OVERLAY) -->
   <div id="huntingOverlay">
     <div class="hunting-text">ENTITY HUNTING</div>
     <div class="hunting-sub">USE GHOST SHIELD NOW // HIDE IMMEDIATELY</div>
   </div>
 
-  <!-- PLAYER DE VÍDEO -->
   <div id="videoContainer">
     <video id="tvVideo" playsinline></video>
   </div>
 
-  <!-- ÁUDIOS DIEGÉTICOS -->
   <audio id="huntingMusic" preload="auto" loop></audio>
   <audio id="sfxPlayer" preload="auto"></audio>
 
   <script>
-    // 1. CREDENCIAIS OFICIAIS DO FIREBASE DO USUÁRIO
     const firebaseConfig = {
       apiKey: "AIzaSyAk-aZpWPXD0za40kDF7kwL9ej3EfaYy6E",
       authDomain: "uptime-halloween-2026.firebaseapp.com",
@@ -293,7 +276,6 @@
     const db = firebase.database();
     const sessionRef = db.ref('montreal_session');
 
-    // 2. ELEMENTOS DOM & VARIÁVEIS DE CONTROLE
     const unlockScreen = document.getElementById('unlockScreen');
     const videoContainer = document.getElementById('videoContainer');
     const tvVideo = document.getElementById('tvVideo');
@@ -312,8 +294,8 @@
     let climaxInterval = null;
     let lastClimaxState = null;
     let lastSfxTimestamp = 0;
+    let lastTvEventTimestamp = 0;
 
-    // HEARTBEAT DE DIAGNÓSTICO (Informa ao Master App que a TV está conectada)
     setInterval(() => {
       db.ref('montreal_session/tv_status').set({
         online: true,
@@ -322,15 +304,12 @@
       });
     }, 4000);
 
-    // Helper para caminhos com espaços
     function getMediaPath(filename) {
       return encodeURI("media/" + filename);
     }
 
-    // Música de Caçada
     huntingMusic.src = getMediaPath("Bran Hunting Song.mp3");
 
-    // Destravamento de Autoplay no navegador do Samsung DeX
     function unlockSystemAudio() {
       audioUnlocked = true;
       unlockScreen.style.display = "none";
@@ -348,19 +327,14 @@
       }, 1000);
     }
 
-    // ==========================================================
-    // ESCUTA EM TEMPO REAL DO FIREBASE
-    // ==========================================================
     sessionRef.on('value', snap => {
       const data = snap.val();
       if (!data) return;
 
-      // 1. Atualização do Totem
       if (data.totem) {
         activeTotemIndicator.textContent = `ACTIVE TOTEM: ${data.totem.toUpperCase()}`;
       }
 
-      // 2. Telemetria Reativa ao Hate
       if (data.hate !== undefined && lastClimaxState !== "good") {
         const h = data.hate;
         emkReading.textContent = `ELECTROMAGNETIC FIELD: ${(1.2 + (h * 0.08)).toFixed(1)} mG`;
@@ -379,25 +353,23 @@
         }
       }
 
-      // 3. Status de Caçada (Hunting)
       if (data.status === "hunting" && !isHunting) {
         startHuntingSequence();
       } else if (data.status !== "hunting" && isHunting) {
         stopHuntingSequence();
       }
 
-      // 4. Ghost Events e Cutscenes na TV
-      if (data.tv_event && data.tv_event.active) {
+      // Trava de timestamp único para não reiniciar vídeo no meio da reprodução
+      if (data.tv_event && data.tv_event.active && data.tv_event.timestamp !== lastTvEventTimestamp) {
+        lastTvEventTimestamp = data.tv_event.timestamp;
         playTvVideo(data.tv_event.video);
       }
 
-      // 5. Sons Atmosféricos Rápidos (Hissing / Whispers) sem repetição acidental
       if (data.sfx_trigger && data.ambient_sfx && data.sfx_trigger !== lastSfxTimestamp) {
         lastSfxTimestamp = data.sfx_trigger;
         playSfx(data.ambient_sfx);
       }
 
-      // 6. Clímax de 5 Minutos
       if (data.countdown_active && data.climax_timestamp) {
         climaxBox.style.display = "flex";
         runClimaxClock(data.climax_timestamp);
@@ -406,7 +378,6 @@
         clearInterval(climaxInterval);
       }
 
-      // 7. Resultado do Clímax (Good Ending com END-COMPLETE.mp4 vs Bad Ending)
       if (data.climax_result === "good" && lastClimaxState !== "good") {
         lastClimaxState = "good";
         stopHuntingSequence();
@@ -426,9 +397,6 @@
       }
     });
 
-    // ==========================================================
-    // MECÂNICA DE CAÇADA: ÁUDIO CONTÍNUO + VÍDEOS ESPORÁDICOS + DUCKING
-    // ==========================================================
     function startHuntingSequence() {
       isHunting = true;
       huntingOverlay.style.display = "flex";
@@ -439,7 +407,6 @@
         huntingMusic.play().catch(e => console.log(e));
       }
 
-      // Loops esporádicos da Ireena aos 10s e aos 35s
       huntIntervals.push(setTimeout(() => {
         if (isHunting) triggerHuntingVideoDuck("HUNTING LOOP 1.mp4");
       }, 10000));
@@ -450,9 +417,7 @@
     }
 
     function triggerHuntingVideoDuck(videoFile) {
-      // Ducking: Abaixa a música de caçada para 35% durante o grito da Ireena
       huntingMusic.volume = 0.35;
-      
       tvVideo.src = getMediaPath(videoFile);
       videoContainer.style.display = "flex";
       tvVideo.play().catch(e => console.log(e));
@@ -472,10 +437,8 @@
       huntIntervals = [];
     }
 
-    // ==========================================================
-    // REPRODUÇÃO DE VÍDEO GERAL (GHOST EVENTS / CUTSCENES)
-    // ==========================================================
     function playTvVideo(videoFile) {
+      if (isHunting) huntingMusic.volume = 0.25;
       tvVideo.src = getMediaPath(videoFile);
       videoContainer.style.display = "flex";
       tvVideo.currentTime = 0;
@@ -484,6 +447,7 @@
 
       tvVideo.onended = () => {
         videoContainer.style.display = "none";
+        if (isHunting) huntingMusic.volume = 1.0;
         sessionRef.child('tv_event').update({ active: false });
       };
     }
@@ -494,10 +458,9 @@
       sfxPlayer.play().catch(e => console.log(e));
     }
 
-    // Cronômetro do Clímax sem encavalar intervalos
     function runClimaxClock(startTimestamp) {
       clearInterval(climaxInterval);
-      const duration = 300; // 5 minutos
+      const duration = 300;
       climaxInterval = setInterval(() => {
         const elapsed = Math.floor((Date.now() - startTimestamp) / 1000);
         const remain = Math.max(0, duration - elapsed);
