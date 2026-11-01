@@ -159,7 +159,6 @@
     .btn-cyan { background: #0e7490; border-color: var(--accent-cyan); color: #cffafe; }
     .btn-cyan:hover { background: #155e75; }
 
-    /* Botão Destacado ON / OFF */
     #btnMasterPower {
       padding: 10px 16px;
       font-size: 0.85rem;
@@ -189,7 +188,7 @@
       padding: 10px;
       border-radius: 4px;
       font-family: var(--font-mono);
-      font-size: 0.76rem;
+      font-size: 0.75rem;
     }
   </style>
 </head>
@@ -198,11 +197,12 @@
   <header>
     <div>
       <h1>CONTROL TERMINAL // MONTREAL WARD</h1>
-      <p style="font-size: 0.75rem; color: var(--text-dim); margin-top: 2px;">MASTER POWER & PROCEDURAL ORCHESTRATOR</p>
+      <p style="font-size: 0.75rem; color: var(--text-dim); margin-top: 2px;">MASTER POWER, API KILL-SWITCH & INPAINTING ORCHESTRATOR</p>
     </div>
     <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
       <span class="badge badge-online" id="statusBadge">STATUS: IDLE</span>
       <button class="btn-green" id="btnMasterPower" onclick="toggleMasterPower()">⚡ JOGO: ON (ATIVO)</button>
+      <button class="btn-green" id="btnApiLock" onclick="toggleApiLock()">🔓 API: LIBERADA</button>
       <button class="btn-purple" id="btnEnvironment" onclick="toggleEnvironment()">AMBIENTE: ESCOLA (LIVE)</button>
       <button class="btn-amber" id="btnMode" onclick="toggleGameMode()">MODO: PROCEDURAL</button>
     </div>
@@ -210,24 +210,36 @@
 
   <div class="grid">
 
-    <!-- CARD 0: CHAVE CENTRAL DA IA & HEALTH CHECK -->
+    <!-- CARD 0: CHAVE CENTRAL DA IA, MOTOR DE INPAINT & HEALTH CHECK -->
     <div class="card">
-      <h2>🔑 CREDENCIAL IA & HEALTH CHECK</h2>
+      <h2>🔑 CREDENCIAL IA, MOTOR INPAINT & HEALTH CHECK</h2>
 
       <div style="display: flex; flex-direction: column; gap: 6px;">
-        <label style="font-size: 0.7rem; color: var(--text-dim);">CHAVE GEMINI (SINCRONIZA COM TODOS OS CELULARES):</label>
+        <label style="font-size: 0.7rem; color: var(--text-dim);">CHAVE GEMINI / VERTEX (SALVA NO SEU APARELHO):</label>
         <div style="display: flex; gap: 6px;">
-          <input type="password" id="masterApiKeyInput" placeholder="Cole sua Gemini API Key (AIzaSy...)">
-          <input type="text" id="masterModelInput" value="gemini-2.5-flash" style="max-width: 135px;" title="Modelo Gemini">
-          <button class="btn-green" onclick="syncApiKeyToFirebase()">SALVAR</button>
+          <input type="password" id="masterApiKeyInput" placeholder="Cole sua API Key (AIzaSy...)">
+          <button class="btn-green" onclick="syncApiKeyToFirebase()" style="min-width: 90px;">SALVAR</button>
         </div>
+        <div style="display: flex; gap: 6px; margin-top: 2px;">
+          <input type="text" id="masterModelInput" value="gemini-2.5-flash" title="Modelo Gatekeeper (Visão/Voz)">
+          <input type="text" id="masterImageModelInput" value="gemini-2.5-flash-image" title="Modelo Inpainting (Nano Banana)">
+        </div>
+      </div>
+
+      <!-- SELETOR MANUAL DE MOTOR DA CÂMERA (PRIORIDADE INPAINT IA vs FALLBACK CANVAS) -->
+      <div style="display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--border); padding-top: 8px;">
+        <label style="font-size: 0.7rem; color: var(--text-dim);">MOTOR DE GERAÇÃO DE FANTASMAS (CONTROLE MANUAL):</label>
+        <button class="btn-green" id="btnCameraEngine" onclick="toggleCameraEngine()">
+          ✨ MOTOR CÂMERA: INPAINT IA (NANO BANANA)
+        </button>
       </div>
 
       <div class="health-status-box">
         <div id="hcPower">⚡ Chave Geral do Jogo: VERIFICANDO...</div>
+        <div id="hcApi">🤖 Status da Chave API: VERIFICANDO...</div>
+        <div id="hcEngine">🎨 Motor da Câmera: INPAINT IA (gemini-2.5-flash-image)</div>
         <div id="hcFirebase">🌐 Firebase Realtime: AGUARDANDO TESTE</div>
         <div id="hcTv">📺 Samsung DeX TV: AGUARDANDO TESTE</div>
-        <div id="hcApi">🤖 Chave Gemini no Banco: VERIFICANDO...</div>
         <div id="hcTotem">📍 Totem Ativo: Sincronizando...</div>
       </div>
 
@@ -387,6 +399,8 @@
     const sessionRef = db.ref('montreal_session');
 
     let isGameOn = true;
+    let isApiLocked = false;
+    let cameraEngine = "inpaint"; // "inpaint" (Nano Banana IA) ou "canvas" (Fallback Manual)
     let currentHate = 30;
     let isTestMode = false;
     let isProceduralMode = true;
@@ -400,7 +414,7 @@
       { id: "tv", label: "TV (Sala Montreal - Central)" },
       { id: "skull", label: "Caveira (Ellie - Mesa)" },
       { id: "wifi", label: "Roteador Wi-Fi (Vincent)" },
-      { id: "mannequin", label: "Manequim (Vestidos)" },
+      { id: "mannequin", label: "Manequim (Living Room - Teto)" },
       { id: "mummy", label: "Múmia (Janela)" },
       { id: "spider", label: "Aranha Gigante (Parede)" },
       { id: "outside", label: "Portas de Vidro (Wander)" }
@@ -428,8 +442,14 @@
       log.innerHTML = `<div>[${time}] ${msg}</div>` + log.innerHTML;
     }
 
+    // Carrega a chave salva localmente no navegador do Mestre
+    const localSavedKey = localStorage.getItem('GEMINI_API_KEY');
+    if (localSavedKey) {
+      document.getElementById('masterApiKeyInput').value = localSavedKey;
+    }
+
     // ===============================================================
-    // CHAVE GERAL ON / OFF (ESTACA ZERO AUTOMÁTICA)
+    // 1. CHAVE GERAL ON / OFF (ESTACA ZERO + PROTEÇÃO DE CHAVE)
     // ===============================================================
     function toggleMasterPower() {
       isGameOn = !isGameOn;
@@ -439,9 +459,9 @@
 
       const defaultTotem = isTestMode ? "fan" : "tv";
       currentHate = 30;
+      const savedKey = localStorage.getItem('GEMINI_API_KEY') || "";
 
-      // Tanto ao desligar (OFF) quanto ao religar (ON), limpamos todos os resíduos de eventos anteriores!
-      sessionRef.update({
+      const payload = {
         game_power: isGameOn ? "on" : "off",
         hate: 30,
         status: "idle",
@@ -453,15 +473,28 @@
         tv_event: { active: false, video: "", timestamp: 0 },
         mobile_event: { active: false, video: "", timestamp: 0 },
         camera_reload_timestamp: Date.now()
-      });
+      };
 
+      // Se desligar o jogo (OFF), bloqueia a chave nos celulares automaticamente
+      if (!isGameOn) {
+        isApiLocked = true;
+        payload.api_locked = true;
+        payload.gemini_key = "LOCKED_BY_MASTER";
+      } else if (savedKey) {
+        isApiLocked = false;
+        payload.api_locked = false;
+        payload.gemini_key = savedKey;
+      }
+
+      sessionRef.update(payload);
       updatePowerButtonUI();
+      updateApiLockUI();
       updateTelemetryCalculations();
 
       if (isGameOn) {
-        logMsg("⚡ JOGO LIGADO (ON): Todos os parâmetros iniciados limpos da estaca zero!");
+        logMsg("⚡ JOGO LIGADO (ON): Parâmetros limpos e chave API liberada para os aparelhos!");
       } else {
-        logMsg("🛑 JOGO DESLIGADO (OFF): Firebase limpo e todas as telas em espera (Estaca Zero).");
+        logMsg("🛑 JOGO DESLIGADO (OFF): Estaca Zero ativada e chave API recolhida/travada.");
       }
     }
 
@@ -479,23 +512,91 @@
       }
     }
 
+    // ===============================================================
+    // 2. BOTÃO DE TRAVA DA CHAVE API ("BOTÃO QUE NINGUÉM MEXE")
+    // ===============================================================
+    function toggleApiLock() {
+      isApiLocked = !isApiLocked;
+      const savedKey = document.getElementById('masterApiKeyInput').value.trim() || localStorage.getItem('GEMINI_API_KEY') || "";
+
+      if (isApiLocked) {
+        sessionRef.update({
+          api_locked: true,
+          gemini_key: "LOCKED_BY_MASTER"
+        });
+        logMsg("🔒 API TRAVADA PELO MESTRE: Nenhum celular de aluno pode consumir créditos agora.");
+      } else {
+        if (!savedKey) {
+          isApiLocked = true;
+          alert("Cole sua chave Gemini primeiro no campo e clique em SALVAR.");
+          return;
+        }
+        localStorage.setItem('GEMINI_API_KEY', savedKey);
+        sessionRef.update({
+          api_locked: false,
+          gemini_key: savedKey
+        });
+        logMsg("🔓 API DESTRAVADA: Chave distribuída para os apps mobile!");
+      }
+      updateApiLockUI();
+    }
+
+    function updateApiLockUI() {
+      const btn = document.getElementById('btnApiLock');
+      if (isApiLocked) {
+        btn.textContent = "🔒 API: TRAVADA (BLOQUEADA)";
+        btn.className = "btn-red";
+      } else {
+        btn.textContent = "🔓 API: LIBERADA";
+        btn.className = "btn-green";
+      }
+    }
+
+    // ===============================================================
+    // 3. SELETOR MANUAL DE MOTOR: INPAINT IA vs FALLBACK CANVAS
+    // ===============================================================
+    function toggleCameraEngine() {
+      cameraEngine = (cameraEngine === "inpaint") ? "canvas" : "inpaint";
+      sessionRef.update({ camera_engine: cameraEngine });
+      updateCameraEngineUI();
+      logMsg(cameraEngine === "inpaint"
+        ? "✨ Motor da Câmera definido para: INPAINT IA (Nano Banana / gemini-2.5-flash-image)"
+        : "🖼️ Motor da Câmera alterado manualmente para: FALLBACK CANVAS (Overlay Local)");
+    }
+
+    function updateCameraEngineUI() {
+      const btn = document.getElementById('btnCameraEngine');
+      const hcEngine = document.getElementById('hcEngine');
+      if (cameraEngine === "inpaint") {
+        btn.textContent = "✨ MOTOR CÂMERA: INPAINT IA (NANO BANANA)";
+        btn.className = "btn-green";
+        hcEngine.innerHTML = `🎨 Motor da Câmera: <span style="color: var(--accent-green)">INPAINT IA (Nano Banana)</span>`;
+      } else {
+        btn.textContent = "🖼️ MOTOR CÂMERA: FALLBACK CANVAS (MANUAL)";
+        btn.className = "btn-amber";
+        hcEngine.innerHTML = `🎨 Motor da Câmera: <span style="color: var(--accent-amber)">FALLBACK CANVAS (Manual)</span>`;
+      }
+    }
+
     function syncApiKeyToFirebase() {
       const key = document.getElementById('masterApiKeyInput').value.trim().replace(/[\r\n\s]/g, '');
       const model = document.getElementById('masterModelInput').value.trim() || "gemini-2.5-flash";
-      if (!key) return alert("Insira uma chave Gemini válida.");
+      const imageModel = document.getElementById('masterImageModelInput').value.trim() || "gemini-2.5-flash-image";
+
+      if (!key || key === "LOCKED_BY_MASTER") return alert("Insira uma chave Gemini válida.");
       localStorage.setItem('GEMINI_API_KEY', key);
+      isApiLocked = false;
+
       sessionRef.update({
         gemini_key: key,
-        gemini_model: model
+        gemini_model: model,
+        gemini_image_model: imageModel,
+        api_locked: false,
+        camera_engine: cameraEngine
       }).then(() => {
-        logMsg(`🔑 Chave Gemini e modelo (${model}) sincronizados no Firebase!`);
-        document.getElementById('hcApi').innerHTML = `🤖 Chave Gemini no Banco: <span style="color: var(--accent-green)">ATIVA (${model})</span>`;
+        updateApiLockUI();
+        logMsg(`🔑 Chave sincronizada! Gatekeeper: ${model} | Inpaint: ${imageModel}`);
       });
-    }
-
-    const localSavedKey = localStorage.getItem('GEMINI_API_KEY');
-    if (localSavedKey) {
-      document.getElementById('masterApiKeyInput').value = localSavedKey;
     }
 
     function renderTotemDropdown() {
@@ -567,11 +668,26 @@
         updatePowerButtonUI();
       }
 
-      if (val.gemini_key) {
+      if (val.api_locked !== undefined) {
+        isApiLocked = !!val.api_locked;
+        updateApiLockUI();
+      }
+
+      if (val.camera_engine) {
+        cameraEngine = val.camera_engine;
+        updateCameraEngineUI();
+      }
+
+      if (val.gemini_key && val.gemini_key !== "LOCKED_BY_MASTER") {
         document.getElementById('masterApiKeyInput').value = val.gemini_key;
-        document.getElementById('hcApi').innerHTML = `🤖 Chave Gemini no Banco: <span style="color: var(--accent-green)">SINCRONIZADA (${val.gemini_model || 'gemini-2.5-flash'})</span>`;
+        localStorage.setItem('GEMINI_API_KEY', val.gemini_key);
+        document.getElementById('hcApi').innerHTML = `🤖 Status da Chave API: <span style="color: var(--accent-green)">ATIVA (${val.gemini_image_model || 'gemini-2.5-flash-image'})</span>`;
+      } else if (val.gemini_key === "LOCKED_BY_MASTER" || val.api_locked) {
+        const localKey = localStorage.getItem('GEMINI_API_KEY');
+        if (localKey) document.getElementById('masterApiKeyInput').value = localKey;
+        document.getElementById('hcApi').innerHTML = `🤖 Status da Chave API: <span style="color: var(--accent-red)">TRAVADA PELO MESTRE (SEGURA)</span>`;
       } else {
-        document.getElementById('hcApi').innerHTML = `🤖 Chave Gemini no Banco: <span style="color: var(--accent-amber)">AUSENTE (Cole acima e salve)</span>`;
+        document.getElementById('hcApi').innerHTML = `🤖 Status da Chave API: <span style="color: var(--accent-amber)">AUSENTE (Cole acima e salve)</span>`;
       }
 
       if (val.hate !== undefined && val.hate !== currentHate) {
@@ -846,6 +962,8 @@
     updateEnvButtonUI();
     updateModeButtonUI();
     updatePowerButtonUI();
+    updateApiLockUI();
+    updateCameraEngineUI();
     updateTelemetryCalculations();
   </script>
 </body>
