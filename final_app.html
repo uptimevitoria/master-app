@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>ANTIGEN CONTROL // GATE OVERRIDE</title>
+  <title>ANTIGEN CONTROL // DUAL OVERRIDE</title>
 
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -32,7 +32,7 @@
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      padding: 16px;
+      padding: 14px;
       position: relative;
       touch-action: none;
     }
@@ -51,70 +51,94 @@
       background: var(--panel);
       border: 1px solid #1e293b;
       border-radius: 8px;
-      padding: 12px 14px;
+      padding: 10px 14px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       z-index: 20;
     }
     .app-title {
-      font-size: 0.9rem;
+      font-size: 0.88rem;
       font-weight: bold;
       color: var(--green);
       letter-spacing: 2px;
     }
     .sub-title {
-      font-size: 0.65rem;
+      font-size: 0.62rem;
       color: #64748b;
       margin-top: 2px;
     }
     #climaxTimerBadge {
-      font-size: 1.1rem;
+      font-size: 1.05rem;
       font-weight: bold;
       color: var(--amber);
       letter-spacing: 2px;
     }
 
+    /* ESTÁGIO 1: BARRA DE 10 PORTÕES (2 LINHAS DE 5) */
     .gates-bar {
       display: grid;
       grid-template-columns: repeat(5, 1fr);
-      gap: 8px;
+      gap: 6px;
       z-index: 20;
+      margin-top: 8px;
     }
     .gate-node {
       background: #090e0c;
       border: 1px solid #1e293b;
       border-radius: 6px;
-      padding: 10px 4px;
+      padding: 6px 2px;
       text-align: center;
-      transition: all 0.25s ease;
+      transition: all 0.2s ease;
+    }
+    .gate-node.armed {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: var(--cyan);
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.35);
+      color: #fff;
     }
     .gate-node.unlocked {
-      background: rgba(16, 185, 129, 0.2);
+      background: rgba(16, 185, 129, 0.25);
       border-color: var(--green);
       box-shadow: 0 0 12px var(--green-glow);
       color: #fff;
     }
     .gate-node.error {
-      background: rgba(239, 68, 68, 0.25);
+      background: rgba(239, 68, 68, 0.28);
       border-color: var(--red);
       box-shadow: 0 0 12px rgba(239, 68, 68, 0.5);
     }
     .gate-label {
-      font-size: 0.6rem;
+      font-size: 0.55rem;
       color: #64748b;
       display: block;
-      margin-bottom: 4px;
+      margin-bottom: 2px;
     }
     .gate-icon {
-      font-size: 1.1rem;
+      font-size: 0.95rem;
       font-weight: bold;
-      color: var(--green);
+      color: var(--cyan);
+    }
+
+    /* CONTAINER CENTRAL DOS STAGES */
+    .stage-wrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      margin: 10px 0;
+      z-index: 20;
+    }
+
+    /* ARENA DE SWIPE (FASE 1) */
+    #stage1Container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
     }
 
     #swipeArena {
       flex: 1;
-      margin: 14px 0;
       background: radial-gradient(circle at center, #0d1914 0%, #030605 100%);
       border: 2px solid #1e293b;
       border-radius: 12px;
@@ -125,7 +149,6 @@
       justify-content: center;
       overflow: hidden;
       box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.9);
-      z-index: 20;
     }
 
     #swipeCanvas {
@@ -138,43 +161,151 @@
 
     .dir-marker {
       position: absolute;
-      font-size: 0.75rem;
+      font-size: 0.7rem;
       color: rgba(16, 185, 129, 0.25);
       letter-spacing: 2px;
       pointer-events: none;
     }
-    .dir-up { top: 14px; }
-    .dir-down { bottom: 14px; }
-    .dir-left { left: 14px; writing-mode: vertical-rl; transform: rotate(180deg); }
-    .dir-right { right: 14px; writing-mode: vertical-rl; }
+    .dir-up { top: 12px; }
+    .dir-down { bottom: 12px; }
+    .dir-left { left: 12px; writing-mode: vertical-rl; transform: rotate(180deg); }
+    .dir-right { right: 12px; writing-mode: vertical-rl; }
 
     .center-prompt {
       pointer-events: none;
       text-align: center;
       z-index: 22;
-      padding: 20px;
+      padding: 16px;
     }
     #swipeBigDirection {
-      font-size: 2.2rem;
+      font-size: 2rem;
       font-weight: bold;
       color: rgba(16, 185, 129, 0.35);
       letter-spacing: 4px;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
       transition: transform 0.15s ease;
     }
     #swipeInstruction {
-      font-size: 0.75rem;
+      font-size: 0.7rem;
       color: #64748b;
+      letter-spacing: 1.2px;
+      line-height: 1.4;
+    }
+
+    /* ARENA DE CORES (FASE 2) */
+    #stage2Container {
+      flex: 1;
+      display: none;
+      flex-direction: column;
+      justify-content: space-between;
+      background: radial-gradient(circle at center, #0f172a 0%, #040806 100%);
+      border: 2px solid var(--cyan);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.9);
+    }
+
+    .spectrum-header {
+      text-align: center;
+    }
+    .spectrum-title {
+      font-size: 0.95rem;
+      font-weight: bold;
+      color: var(--cyan);
+      letter-spacing: 2px;
+      margin-bottom: 4px;
+    }
+    .spectrum-sub {
+      font-size: 0.68rem;
+      color: #94a3b8;
+      letter-spacing: 1px;
+    }
+
+    .color-slots-bar {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+      margin: 12px 0;
+    }
+    .color-slot {
+      height: 46px;
+      border-radius: 8px;
+      background: #060a09;
+      border: 2px dashed #334155;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      font-weight: bold;
+      color: #64748b;
+      transition: all 0.2s ease;
+    }
+    .color-slot.error {
+      border-color: var(--red) !important;
+      background: rgba(239, 68, 68, 0.3) !important;
+      box-shadow: 0 0 15px var(--red);
+    }
+
+    .color-pad-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      flex: 1;
+      max-height: 270px;
+    }
+    .color-btn {
+      border-radius: 10px;
+      border: 2px solid rgba(255, 255, 255, 0.25);
+      font-family: var(--font-mono);
+      font-size: 0.95rem;
+      font-weight: bold;
+      letter-spacing: 2px;
+      color: #fff;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.85);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.1s ease, filter 0.15s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .color-btn:active {
+      transform: scale(0.95);
+      filter: brightness(1.25);
+    }
+
+    .btn-red    { background: linear-gradient(135deg, #ef4444, #991b1b); box-shadow: 0 0 15px rgba(239, 68, 68, 0.35); }
+    .btn-blue   { background: linear-gradient(135deg, #3b82f6, #1d4ed8); box-shadow: 0 0 15px rgba(59, 130, 246, 0.35); }
+    .btn-yellow { background: linear-gradient(135deg, #eab308, #a16207); box-shadow: 0 0 15px rgba(234, 179, 8, 0.35); }
+    .btn-orange { background: linear-gradient(135deg, #f97316, #c2410c); box-shadow: 0 0 15px rgba(249, 115, 22, 0.35); }
+    .btn-purple { background: linear-gradient(135deg, #a855f7, #6b21a8); box-shadow: 0 0 15px rgba(168, 85, 247, 0.35); }
+    .btn-pink   { background: linear-gradient(135deg, #ec4899, #9d174d); box-shadow: 0 0 15px rgba(236, 72, 153, 0.35); }
+
+    .aux-reset-btn {
+      margin-top: 8px;
+      background: #111c18;
+      border: 1px solid #334155;
+      color: #94a3b8;
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      padding: 7px;
+      border-radius: 6px;
       letter-spacing: 1.5px;
+      cursor: pointer;
+      text-align: center;
+    }
+    .aux-reset-btn:active {
+      background: #1e293b;
+      color: #fff;
     }
 
     footer {
       background: var(--panel);
       border: 1px solid #1e293b;
       border-radius: 8px;
-      padding: 12px;
+      padding: 10px;
       text-align: center;
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       color: #94a3b8;
       letter-spacing: 1px;
       z-index: 20;
@@ -234,56 +365,81 @@
   <header>
     <div>
       <div class="app-title">ANTIGEN DISPERSAL UNIT</div>
-      <div class="sub-title">BIO-CONTAMINATION VENTILATION GATES</div>
+      <div class="sub-title" id="phaseSubTitle">PHASE 1/2: 10-GATE MECHANICAL VALVES</div>
     </div>
     <div id="climaxTimerBadge">STANDBY</div>
   </header>
 
-  <div class="gates-bar">
-    <div class="gate-node" id="gate0">
-      <span class="gate-label">GATE 01</span>
-      <span class="gate-icon">🔒</span>
-    </div>
-    <div class="gate-node" id="gate1">
-      <span class="gate-label">GATE 02</span>
-      <span class="gate-icon">🔒</span>
-    </div>
-    <div class="gate-node" id="gate2">
-      <span class="gate-label">GATE 03</span>
-      <span class="gate-icon">🔒</span>
-    </div>
-    <div class="gate-node" id="gate3">
-      <span class="gate-label">GATE 04</span>
-      <span class="gate-icon">🔒</span>
-    </div>
-    <div class="gate-node" id="gate4">
-      <span class="gate-label">GATE 05</span>
-      <span class="gate-icon">🔒</span>
-    </div>
+  <!-- BARRA DOS 10 PORTÕES DE DIREÇÃO -->
+  <div class="gates-bar" id="gatesBar">
+    <div class="gate-node" id="gate0"><span class="gate-label">G01</span><span class="gate-icon">🔒</span></div>
+    <div class="gate-node" id="gate1"><span class="gate-label">G02</span><span class="gate-icon">🔒</span></div>
+    <div class="gate-node" id="gate2"><span class="gate-label">G03</span><span class="gate-icon">🔒</span></div>
+    <div class="gate-node" id="gate3"><span class="gate-label">G04</span><span class="gate-icon">🔒</span></div>
+    <div class="gate-node" id="gate4"><span class="gate-label">G05</span><span class="gate-icon">🔒</span></div>
+    <div class="gate-node" id="gate5"><span class="gate-label">G06</span><span class="gate-icon">🔒</span></div>
+    <div class="gate-node" id="gate6"><span class="gate-label">G07</span><span class="gate-icon">🔒</span></div>
+    <div class="gate-node" id="gate7"><span class="gate-label">G08</span><span class="gate-icon">🔒</span></div>
+    <div class="gate-node" id="gate8"><span class="gate-label">G09</span><span class="gate-icon">🔒</span></div>
+    <div class="gate-node" id="gate9"><span class="gate-label">G10</span><span class="gate-icon">🔒</span></div>
   </div>
 
-  <div id="swipeArena">
-    <div class="dir-marker dir-up">▲ NORTH VALVE (UP)</div>
-    <div class="dir-marker dir-down">▼ SOUTH VALVE (DOWN)</div>
-    <div class="dir-marker dir-left">◄ WEST VALVE</div>
-    <div class="dir-marker dir-right">► EAST VALVE</div>
+  <div class="stage-wrapper">
+    <!-- FASE 1: SWIPE DE 10 DIREÇÕES -->
+    <div id="stage1Container">
+      <div id="swipeArena">
+        <div class="dir-marker dir-up">▲ NORTH VALVE (UP)</div>
+        <div class="dir-marker dir-down">▼ SOUTH VALVE (DOWN)</div>
+        <div class="dir-marker dir-left">◄ WEST VALVE</div>
+        <div class="dir-marker dir-right">► EAST VALVE</div>
 
-    <div class="center-prompt">
-      <div id="swipeBigDirection">SWIPE</div>
-      <div id="swipeInstruction">SLIDE FINGER IN THE ECHO PROTOCOL SEQUENCE TO UNLOCK ANTIGEN GATES</div>
+        <div class="center-prompt">
+          <div id="swipeBigDirection">SWIPE</div>
+          <div id="swipeInstruction">INPUT ALL 10 DIRECTIONAL VALVES FROM ECHO PROTOCOL.<br>VALIDATION OCCURS ON GATE 10.</div>
+        </div>
+
+        <canvas id="swipeCanvas"></canvas>
+      </div>
+      <button class="aux-reset-btn" onclick="manualResetDirections()">↺ CLEAR / RESTART 10 GATES</button>
     </div>
 
-    <canvas id="swipeCanvas"></canvas>
+    <!-- FASE 2: CALIBRAÇÃO DE 6 CORES NO TETO -->
+    <div id="stage2Container">
+      <div class="spectrum-header">
+        <div class="spectrum-title">OPTICAL SPECTRUM LOCK</div>
+        <div class="spectrum-sub">OBSERVE CEILING LAMP & ENTER THE 6-COLOR SEQUENCE</div>
+      </div>
+
+      <div class="color-slots-bar">
+        <div class="color-slot" id="cslot0">01</div>
+        <div class="color-slot" id="cslot1">02</div>
+        <div class="color-slot" id="cslot2">03</div>
+        <div class="color-slot" id="cslot3">04</div>
+        <div class="color-slot" id="cslot4">05</div>
+        <div class="color-slot" id="cslot5">06</div>
+      </div>
+
+      <div class="color-pad-grid">
+        <button class="color-btn btn-red" onclick="processColorTap('RED')">RED</button>
+        <button class="color-btn btn-blue" onclick="processColorTap('BLUE')">BLUE</button>
+        <button class="color-btn btn-yellow" onclick="processColorTap('YELLOW')">YELLOW</button>
+        <button class="color-btn btn-orange" onclick="processColorTap('ORANGE')">ORANGE</button>
+        <button class="color-btn btn-purple" onclick="processColorTap('PURPLE')">PURPLE</button>
+        <button class="color-btn btn-pink" onclick="processColorTap('PINK')">PINK</button>
+      </div>
+
+      <button class="aux-reset-btn" onclick="manualResetColors()">↺ CLEAR COLOR SLOTS</button>
+    </div>
   </div>
 
   <footer id="footerStatus">
-    AWAITING DIRECTIONAL OVERRIDE SEQUENCE...
+    STAGE 1: AWAITING 10-DIRECTIONAL VALVE OVERRIDE...
   </footer>
 
   <div id="victoryOverlay">
     <div style="font-size: 3.5rem; margin-bottom: 12px;">🧪</div>
-    <div class="vic-title">ANTIGEN GATES OPENED</div>
-    <div class="vic-sub">PURIFYING AEROSOL DISPERSED ACROSS MONTREAL WARD // WATCH THE CENTRAL MONITOR</div>
+    <div class="vic-title">ANTIGEN DISPERSED</div>
+    <div class="vic-sub">VALVES & PHOTONIC SPECTRUM LOCKED // WATCH THE CENTRAL MONITOR</div>
   </div>
 
   <div id="mobileJumpscareLayer">
@@ -306,11 +462,39 @@
     const db = firebase.database();
     const sessionRef = db.ref('montreal_session');
 
-    const SECRET_SEQUENCE = ["UP", "RIGHT", "DOWN", "LEFT", "UP"];
-    let userSequence = [];
+    // =========================================================================
+    // GABARITO OFICIAL DOS 2 ESTÁGIOS (ECHO DOT: "ECHO, DAYLIGHT PROTOCOL")
+    // =========================================================================
+    // Estágio 1: 10 Direções (5 originais + 5 adicionais)
+    const SECRET_DIRECTIONS = [
+      "UP", "RIGHT", "DOWN", "LEFT", "UP",
+      "DOWN", "RIGHT", "UP", "LEFT", "DOWN"
+    ];
+
+    // Estágio 2: 6 Cores da Lâmpada no Teto
+    const SECRET_COLORS = [
+      "ORANGE", "PURPLE", "BLUE", "RED", "BLUE", "ORANGE"
+    ];
+
+    const COLOR_HEX_MAP = {
+      RED: "#ef4444",
+      BLUE: "#3b82f6",
+      YELLOW: "#eab308",
+      ORANGE: "#f97316",
+      PURPLE: "#a855f7",
+      PINK: "#ec4899"
+    };
+
+    let currentStage = 1;
+    let userDirections = [];
+    let userColors = [];
+    let isBusyAnimating = false;
     let isUnlocked = false;
     let lastMobileEventTimestamp = 0;
 
+    const phaseSubTitle = document.getElementById('phaseSubTitle');
+    const stage1Container = document.getElementById('stage1Container');
+    const stage2Container = document.getElementById('stage2Container');
     const swipeArena = document.getElementById('swipeArena');
     const canvas = document.getElementById('swipeCanvas');
     const ctx = canvas.getContext('2d');
@@ -334,6 +518,7 @@
     function playValveSound(freq, type = "sine", duration = 0.18) {
       try {
         if (!audioCtx) audioCtx = new AudioCtx();
+        if (audioCtx.state === "suspended") audioCtx.resume();
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.type = type;
@@ -360,10 +545,7 @@
       }
 
       if (!data.climax_result && isUnlocked) {
-        // Se o Mestre deu Hard Reset na sala, destrava o app para a próxima turma
-        isUnlocked = false;
-        victoryOverlay.style.display = "none";
-        resetGatesUI();
+        fullSystemResetToStage1();
       }
 
       if (data.mobile_event && data.mobile_event.active && data.mobile_event.timestamp !== lastMobileEventTimestamp) {
@@ -384,12 +566,15 @@
       }, 1000);
     }
 
+    // =========================================================================
+    // FASE 1: CAPTURA DE SWIPE (10 DIREÇÕES COM VALIDAÇÃO CEGA NO LOTE)
+    // =========================================================================
     let startX = 0, startY = 0;
     let isDrawing = false;
     let trailPoints = [];
 
     function startGesture(x, y) {
-      if (isUnlocked) return;
+      if (isUnlocked || isBusyAnimating || currentStage !== 1) return;
       isDrawing = true;
       startX = x;
       startY = y;
@@ -397,13 +582,13 @@
     }
 
     function moveGesture(x, y) {
-      if (!isDrawing || isUnlocked) return;
+      if (!isDrawing || isUnlocked || isBusyAnimating || currentStage !== 1) return;
       trailPoints.push({ x, y });
       drawBladeTrail();
     }
 
     function endGesture(endX, endY) {
-      if (!isDrawing || isUnlocked) return;
+      if (!isDrawing || isUnlocked || isBusyAnimating || currentStage !== 1) return;
       isDrawing = false;
 
       const dx = endX - startX;
@@ -431,11 +616,11 @@
       if (trailPoints.length < 2) return;
 
       ctx.save();
-      ctx.strokeStyle = "#10b981";
+      ctx.strokeStyle = "#38bdf8";
       ctx.lineWidth = 6;
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
-      ctx.shadowColor = "#10b981";
+      ctx.shadowColor = "#38bdf8";
       ctx.shadowBlur = 15;
 
       ctx.beginPath();
@@ -476,59 +661,199 @@
 
     const dirArrows = { UP: "▲ UP", RIGHT: "► RIGHT", DOWN: "▼ DOWN", LEFT: "◄ LEFT" };
 
-    function resetGatesUI() {
-      userSequence = [];
-      for (let i = 0; i < 5; i++) {
-        const g = document.getElementById(`gate${i}`);
-        g.classList.remove('unlocked', 'error');
-        g.querySelector('.gate-icon').textContent = "🔒";
+    function processSwipeInput(dir) {
+      if (userDirections.length >= 10 || isBusyAnimating) return;
+
+      const stepIdx = userDirections.length;
+      userDirections.push(dir);
+
+      swipeBigDirection.textContent = dirArrows[dir];
+      swipeBigDirection.style.color = "var(--cyan)";
+      swipeBigDirection.style.transform = "scale(1.15)";
+      setTimeout(() => { swipeBigDirection.style.transform = "scale(1)"; }, 140);
+
+      const gateEl = document.getElementById(`gate${stepIdx}`);
+      gateEl.classList.add('armed');
+      gateEl.querySelector('.gate-icon').textContent = dirArrows[dir].split(' ')[0];
+
+      playValveSound(280 + (stepIdx * 45), "triangle", 0.14);
+      if (navigator.vibrate) navigator.vibrate(45);
+
+      footerStatus.textContent = `VALVE ${stepIdx + 1}/10 ARMED // CONTINUE SEQUENCE...`;
+      footerStatus.style.color = "var(--cyan)";
+
+      // Validação Cega somente após o 10º swipe
+      if (userDirections.length === 10) {
+        isBusyAnimating = true;
+        setTimeout(validateAll10Directions, 250);
       }
     }
 
-    function processSwipeInput(dir) {
-      const currentStep = userSequence.length;
-      swipeBigDirection.textContent = dirArrows[dir];
-      swipeBigDirection.style.color = "var(--green)";
-      swipeBigDirection.style.transform = "scale(1.15)";
-      setTimeout(() => { swipeBigDirection.style.transform = "scale(1)"; }, 150);
+    function validateAll10Directions() {
+      const isMatch = userDirections.every((d, idx) => d === SECRET_DIRECTIONS[idx]);
 
-      if (dir === SECRET_SEQUENCE[currentStep]) {
-        userSequence.push(dir);
-        const gateEl = document.getElementById(`gate${currentStep}`);
-        gateEl.classList.add('unlocked');
-        gateEl.querySelector('.gate-icon').textContent = dirArrows[dir].split(' ')[0];
+      if (isMatch) {
+        for (let i = 0; i < 10; i++) {
+          const g = document.getElementById(`gate${i}`);
+          g.classList.remove('armed');
+          g.classList.add('unlocked');
+          g.querySelector('.gate-icon').style.color = "var(--green)";
+        }
 
-        playValveSound(320 + (currentStep * 110), "triangle", 0.2);
-        if (navigator.vibrate) navigator.vibrate(70);
+        playValveSound(660, "sine", 0.45);
+        if (navigator.vibrate) navigator.vibrate([80, 50, 150]);
 
-        footerStatus.textContent = `GATE 0${currentStep + 1} UNLOCKED // KEEP SWIPING...`;
+        swipeBigDirection.textContent = "✓ VALVES OPEN";
+        swipeBigDirection.style.color = "var(--green)";
+        footerStatus.textContent = "ALL 10 GATES UNLOCKED // SWITCHING TO SPECTRUM LOCK...";
         footerStatus.style.color = "var(--green)";
 
-        if (userSequence.length === SECRET_SEQUENCE.length) {
-          triggerAntigenVictory();
-        }
+        setTimeout(() => {
+          currentStage = 2;
+          isBusyAnimating = false;
+          phaseSubTitle.textContent = "PHASE 2/2: CEILING SPECTRUM CALIBRATION";
+          stage1Container.style.display = "none";
+          stage2Container.style.display = "flex";
+          footerStatus.textContent = "STAGE 2: TAP THE 6 CEILING LAMP COLORS IN ORDER...";
+          footerStatus.style.color = "var(--amber)";
+        }, 900);
+
       } else {
-        playValveSound(140, "sawtooth", 0.35);
-        if (navigator.vibrate) navigator.vibrate([150, 80, 150]);
+        playValveSound(130, "sawtooth", 0.4);
+        if (navigator.vibrate) navigator.vibrate([180, 80, 180]);
 
-        footerStatus.textContent = "⚠️ VALVE SEQUENCE MISMATCH // GATES RESET!";
-        footerStatus.style.color = "var(--red)";
+        swipeBigDirection.textContent = "✕ MISMATCH";
         swipeBigDirection.style.color = "var(--red)";
+        footerStatus.textContent = "⚠️ 10-GATE SEQUENCE INVALID // VALVES RESET!";
+        footerStatus.style.color = "var(--red)";
 
-        userSequence = [];
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 10; i++) {
           const g = document.getElementById(`gate${i}`);
-          g.classList.remove('unlocked');
+          g.classList.remove('armed');
           g.classList.add('error');
-          g.querySelector('.gate-icon').textContent = "🔒";
-          setTimeout(() => g.classList.remove('error'), 500);
         }
+
+        setTimeout(() => {
+          resetGatesUI();
+          isBusyAnimating = false;
+        }, 650);
       }
+    }
+
+    function manualResetDirections() {
+      if (isUnlocked || isBusyAnimating || currentStage !== 1) return;
+      playValveSound(190, "sine", 0.12);
+      resetGatesUI();
+      swipeBigDirection.textContent = "SWIPE";
+      swipeBigDirection.style.color = "rgba(16, 185, 129, 0.35)";
+      footerStatus.textContent = "10 GATES CLEARED // START FROM GATE 01...";
+      footerStatus.style.color = "#94a3b8";
+    }
+
+    function resetGatesUI() {
+      userDirections = [];
+      for (let i = 0; i < 10; i++) {
+        const g = document.getElementById(`gate${i}`);
+        g.classList.remove('armed', 'unlocked', 'error');
+        const icon = g.querySelector('.gate-icon');
+        icon.textContent = "🔒";
+        icon.style.color = "var(--cyan)";
+      }
+    }
+
+    // =========================================================================
+    // FASE 2: CALIBRAÇÃO DE 6 CORES (ORANGE, PURPLE, BLUE, RED, BLUE, ORANGE)
+    // =========================================================================
+    function processColorTap(colorName) {
+      if (isUnlocked || isBusyAnimating || currentStage !== 2) return;
+      if (userColors.length >= 6) return;
+
+      const slotIdx = userColors.length;
+      userColors.push(colorName);
+
+      const slotEl = document.getElementById(`cslot${slotIdx}`);
+      slotEl.style.background = COLOR_HEX_MAP[colorName];
+      slotEl.style.borderColor = "#fff";
+      slotEl.style.borderStyle = "solid";
+      slotEl.style.color = "#fff";
+      slotEl.style.textShadow = "0 1px 3px #000";
+      slotEl.textContent = colorName.slice(0, 3);
+
+      playValveSound(400 + (slotIdx * 70), "sine", 0.15);
+      if (navigator.vibrate) navigator.vibrate(50);
+
+      footerStatus.textContent = `SPECTRUM SLOT 0${slotIdx + 1}/06 LOCKED (${colorName})`;
+      footerStatus.style.color = "var(--cyan)";
+
+      // Validação Cega no 6º toque de cor
+      if (userColors.length === 6) {
+        isBusyAnimating = true;
+        setTimeout(validateAll6Colors, 250);
+      }
+    }
+
+    function validateAll6Colors() {
+      const isMatch = userColors.every((c, idx) => c === SECRET_COLORS[idx]);
+
+      if (isMatch) {
+        triggerAntigenVictory();
+      } else {
+        playValveSound(125, "sawtooth", 0.42);
+        if (navigator.vibrate) navigator.vibrate([200, 90, 200]);
+
+        footerStatus.textContent = "⚠️ SPECTRUM MISMATCH // REPEAT 'ECHO, DAYLIGHT PROTOCOL'";
+        footerStatus.style.color = "var(--red)";
+
+        for (let i = 0; i < 6; i++) {
+          document.getElementById(`cslot${i}`).classList.add('error');
+        }
+
+        setTimeout(() => {
+          resetColorsUI();
+          isBusyAnimating = false;
+        }, 700);
+      }
+    }
+
+    function manualResetColors() {
+      if (isUnlocked || isBusyAnimating || currentStage !== 2) return;
+      playValveSound(190, "sine", 0.12);
+      resetColorsUI();
+      footerStatus.textContent = "COLOR SLOTS CLEARED // ENTER 6 CEILING COLORS...";
+      footerStatus.style.color = "#94a3b8";
+    }
+
+    function resetColorsUI() {
+      userColors = [];
+      for (let i = 0; i < 6; i++) {
+        const s = document.getElementById(`cslot${i}`);
+        s.className = "color-slot";
+        s.style.background = "#060a09";
+        s.style.borderColor = "#334155";
+        s.style.borderStyle = "dashed";
+        s.style.color = "#64748b";
+        s.style.textShadow = "none";
+        s.textContent = `0${i + 1}`;
+      }
+    }
+
+    function fullSystemResetToStage1() {
+      isUnlocked = false;
+      isBusyAnimating = false;
+      currentStage = 1;
+      victoryOverlay.style.display = "none";
+      stage2Container.style.display = "none";
+      stage1Container.style.display = "flex";
+      phaseSubTitle.textContent = "PHASE 1/2: 10-GATE MECHANICAL VALVES";
+      resetGatesUI();
+      resetColorsUI();
+      resizeCanvas();
     }
 
     function triggerAntigenVictory() {
       isUnlocked = true;
-      playValveSound(880, "sine", 0.6);
+      isBusyAnimating = false;
+      playValveSound(880, "sine", 0.65);
       if (navigator.vibrate) navigator.vibrate([100, 50, 200, 50, 500]);
 
       victoryOverlay.style.display = "flex";
