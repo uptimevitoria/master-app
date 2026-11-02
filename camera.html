@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>SPECTRAL CAMERA // SENSITIZED LENS</title>
+  <title>SPECTRAL CAMERA // DUAL-OPTIC SYSTEM</title>
 
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -11,11 +11,13 @@
   <style>
     :root {
       --bg: #05070a;
+      --panel: #0c1218;
       --green: #10b981;
       --green-glow: rgba(16, 185, 129, 0.4);
       --red: #ef4444;
       --cyan: #38bdf8;
       --amber: #f59e0b;
+      --purple: #a855f7;
       --font-mono: 'Courier New', Courier, monospace;
     }
 
@@ -42,6 +44,81 @@
       background-size: 100% 4px, 6px 100%;
       pointer-events: none;
       z-index: 500;
+    }
+
+    /* MENU INICIAL DE ESCOLHA DE CÂMERA (INVESTIGATION vs GHOST) */
+    #lensMenuScreen {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at center, #0a1412 0%, #030507 100%);
+      z-index: 400;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      gap: 20px;
+      text-align: center;
+    }
+
+    .menu-header-box {
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      background: rgba(12, 18, 24, 0.85);
+      padding: 16px;
+      border-radius: 8px;
+      width: 100%;
+      max-width: 360px;
+    }
+    .menu-title {
+      color: var(--green);
+      font-size: 1.15rem;
+      font-weight: bold;
+      letter-spacing: 3px;
+      margin-bottom: 6px;
+    }
+    .menu-sub {
+      color: #64748b;
+      font-size: 0.72rem;
+      letter-spacing: 1px;
+    }
+
+    .lens-card-btn {
+      width: 100%;
+      max-width: 360px;
+      background: var(--panel);
+      border: 2px solid #1e293b;
+      border-radius: 10px;
+      padding: 20px 16px;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+    .lens-card-btn:active {
+      transform: scale(0.97);
+    }
+    .lens-card-inv {
+      border-color: var(--cyan);
+      box-shadow: 0 0 18px rgba(56, 189, 248, 0.15);
+    }
+    .lens-card-ghost {
+      border-color: var(--green);
+      box-shadow: 0 0 18px rgba(16, 185, 129, 0.15);
+    }
+    .lens-card-title {
+      font-size: 0.98rem;
+      font-weight: bold;
+      letter-spacing: 1.5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .lens-card-desc {
+      font-size: 0.72rem;
+      color: #94a3b8;
+      line-height: 1.4;
     }
 
     #viewportContainer {
@@ -74,24 +151,57 @@
       z-index: 15;
     }
 
+    /* CAIXA DE TEXTO DE EVIDÊNCIA DO DOUTOR (EXCLUSIVA DO INVESTIGATION MODE) */
+    #doctorEvidenceBox {
+      position: absolute;
+      bottom: 185px;
+      left: 24px;
+      right: 24px;
+      background: rgba(8, 15, 23, 0.92);
+      border: 1px solid var(--cyan);
+      border-left: 4px solid var(--cyan);
+      border-radius: 6px;
+      padding: 12px 14px;
+      z-index: 25;
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(4px);
+    }
+    .doc-box-header {
+      font-size: 0.7rem;
+      color: var(--cyan);
+      font-weight: bold;
+      letter-spacing: 1.5px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .doc-box-transcript {
+      font-size: 0.78rem;
+      color: #f1f5f9;
+      line-height: 1.4;
+      font-style: italic;
+    }
+
     #developingOverlay {
       position: absolute;
       inset: 0;
-      background: rgba(3, 8, 6, 0.85);
+      background: rgba(3, 8, 6, 0.92);
       z-index: 18;
       display: none;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 12px;
+      gap: 14px;
       text-align: center;
       padding: 24px;
-      backdrop-filter: blur(4px);
+      backdrop-filter: blur(6px);
     }
     .spinner-ring {
-      width: 54px;
-      height: 54px;
-      border: 3px solid rgba(16, 185, 129, 0.2);
+      width: 60px;
+      height: 60px;
+      border: 4px solid rgba(16, 185, 129, 0.2);
       border-top-color: var(--green);
       border-radius: 50%;
       animation: spin 0.9s linear infinite;
@@ -143,15 +253,27 @@
       justify-content: space-between;
       align-items: flex-start;
       text-shadow: 0 0 5px rgba(0,0,0,0.8);
+      pointer-events: auto;
     }
     .plate-counter {
-      background: rgba(0, 0, 0, 0.6);
+      background: rgba(0, 0, 0, 0.7);
       border: 1px solid var(--green);
-      padding: 4px 8px;
+      padding: 5px 9px;
       border-radius: 4px;
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       color: var(--green);
       font-weight: bold;
+    }
+    .btn-switch-mode {
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid #475569;
+      color: #f1f5f9;
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      padding: 6px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 6px;
     }
 
     .hud-bottom {
@@ -162,10 +284,10 @@
       margin-bottom: 90px;
     }
     .status-banner {
-      background: rgba(0, 0, 0, 0.75);
+      background: rgba(0, 0, 0, 0.8);
       border-left: 3px solid var(--green);
       padding: 6px 10px;
-      font-size: 0.75rem;
+      font-size: 0.74rem;
       letter-spacing: 1px;
     }
 
@@ -198,7 +320,6 @@
     }
     #shutterBtn:active {
       transform: scale(0.92);
-      box-shadow: 0 0 30px rgba(16, 185, 129, 0.8);
     }
     #shutterBtn:disabled {
       background: #334155;
@@ -209,7 +330,7 @@
     }
 
     #btnResetVisor {
-      background: rgba(15, 23, 42, 0.9);
+      background: rgba(15, 23, 42, 0.95);
       border: 1px solid var(--green);
       color: var(--green);
       font-family: var(--font-mono);
@@ -252,17 +373,60 @@
   <div class="crt-overlay"></div>
   <div id="shutterFlash"></div>
 
+  <!-- TELA 1: MENU INICIAL (ESCOLHA DA CÂMERA ANTES DE LIGAR A LENTE) -->
+  <div id="lensMenuScreen">
+    <div class="menu-header-box">
+      <div class="menu-title">OBSCURA SYSTEM v4.2</div>
+      <div class="menu-sub">SELECT OPTICAL FILTER BEFORE INITIALIZING LENS</div>
+    </div>
+
+    <div class="lens-card-btn lens-card-inv" onclick="selectCameraMode('investigation')">
+      <div class="lens-card-title" style="color: var(--cyan);">
+        <span>🔬 INVESTIGATION MODE</span>
+        <span style="font-size: 0.7rem; border: 1px solid var(--cyan); padding: 2px 6px; border-radius: 4px;">DOCTOR LOGS</span>
+      </div>
+      <div class="lens-card-desc">
+        Scans physical room totems to extract Doctor's recorded voice logs and Spectral Viscosity Index (SVI) telemetry. Does not project entities.
+      </div>
+    </div>
+
+    <div class="lens-card-btn lens-card-ghost" onclick="selectCameraMode('ghost')">
+      <div class="lens-card-title" style="color: var(--green);">
+        <span>👻 GHOST MODE</span>
+        <span style="font-size: 0.7rem; border: 1px solid var(--green); padding: 2px 6px; border-radius: 4px;">ECTOPLASM AI</span>
+      </div>
+      <div class="lens-card-desc">
+        Long-exposure silver plate using Nano Banana AI to materialize hidden spectral entities interacting with the room environment.
+      </div>
+    </div>
+
+    <div style="font-size: 0.68rem; color: #64748b; max-width: 320px;" id="menuEnvStatus">
+      CONNECTING TO MONTREAL TELEMETRY...
+    </div>
+  </div>
+
+  <!-- TELA 2: VISOR DA CÂMERA -->
   <div id="viewportContainer">
     <video id="videoFeed" autoplay playsinline muted></video>
     <img id="capturedImageDisplay" alt="Exposed Plate">
 
+    <!-- CAIXA DE EVIDÊNCIA DO DOUTOR (SÓ APARECE NO INVESTIGATION MODE) -->
+    <div id="doctorEvidenceBox">
+      <div class="doc-box-header">
+        <span>🎙️ DR. FORENSIC AUDIO LOG</span>
+        <span id="docBoxSvi">SVI: ---</span>
+      </div>
+      <div class="doc-box-transcript" id="docBoxText">""</div>
+    </div>
+
+    <!-- LOADING DO NANO BANANA (GHOST MODE) -->
     <div id="developingOverlay">
       <div class="spinner-ring"></div>
-      <div style="color: var(--green); font-size: 0.85rem; letter-spacing: 2px; font-weight: bold;">
-        DEVELOPING SILVER PLATE...
+      <div style="color: var(--green); font-size: 0.9rem; letter-spacing: 2px; font-weight: bold;">
+        NANO BANANA AI // DEVELOPING PLATE...
       </div>
-      <div style="color: #94a3b8; font-size: 0.7rem; max-width: 260px;">
-        SPECTRAL INTERFERENCE DETECTED // RECONSTRUCTING ECTOPLASMIC GEOMETRY
+      <div style="color: #94a3b8; font-size: 0.72rem; max-width: 280px; line-height: 1.4;">
+        RECONSTRUCTING 3D ROOM PERSPECTIVE & MANIFESTING CONSISTENT ENTITY... PLEASE WAIT.
       </div>
     </div>
 
@@ -272,24 +436,25 @@
   </div>
 
   <div class="hud-frame">
-    <div class="reticle-corner c-tl"></div>
-    <div class="reticle-corner c-tr"></div>
-    <div class="reticle-corner c-bl"></div>
-    <div class="reticle-corner c-br"></div>
+    <div class="reticle-corner c-tl" id="retTl"></div>
+    <div class="reticle-corner c-tr" id="retTr"></div>
+    <div class="reticle-corner c-bl" id="retBl"></div>
+    <div class="reticle-corner c-br" id="retBr"></div>
     <div class="crosshair-center"></div>
 
     <div class="hud-top">
       <div>
-        <div style="font-size: 0.85rem; font-weight: bold; color: var(--green);">OBSCURA LENS 04</div>
-        <div style="font-size: 0.65rem; color: #94a3b8;" id="envIndicator">ENV: LIVE SCHOOL // INPAINT AI</div>
+        <div style="font-size: 0.85rem; font-weight: bold; color: var(--green);" id="activeLensTitle">GHOST LENS</div>
+        <div style="font-size: 0.64rem; color: #94a3b8;" id="envIndicator">ENV: LIVE SCHOOL</div>
+        <button class="btn-switch-mode" onclick="openLensMenu()">⇄ MENU / SWITCH LENS</button>
       </div>
       <div class="plate-counter" id="plateCounterDisplay">PLATES: 10 / 10</div>
     </div>
 
     <div class="hud-bottom">
-      <div class="status-banner" id="statusBanner">SENSOR READY // KEEP 1.5m-2m CONTAINMENT DISTANCE</div>
+      <div class="status-banner" id="statusBanner">SENSOR READY // KEEP 1.5m-2m DISTANCE</div>
       <div style="display: flex; justify-content: space-between; font-size: 0.65rem; color: #64748b;">
-        <span id="sviDisplay">SPECTRAL INDEX: STANDBY</span>
+        <span id="sviDisplay">ENGINE: NANO BANANA AI</span>
         <span id="hateAlert">HATE ESCALATION: +5% PER SHOT</span>
       </div>
     </div>
@@ -325,11 +490,16 @@
     const db = firebase.database();
     const sessionRef = db.ref('montreal_session');
 
+    const lensMenuScreen = document.getElementById('lensMenuScreen');
+    const menuEnvStatus = document.getElementById('menuEnvStatus');
     const videoFeed = document.getElementById('videoFeed');
     const captureCanvas = document.getElementById('captureCanvas');
     const compositeCanvas = document.getElementById('compositeCanvas');
     const refHelperCanvas = document.getElementById('refHelperCanvas');
     const capturedImageDisplay = document.getElementById('capturedImageDisplay');
+    const doctorEvidenceBox = document.getElementById('doctorEvidenceBox');
+    const docBoxSvi = document.getElementById('docBoxSvi');
+    const docBoxText = document.getElementById('docBoxText');
     const developingOverlay = document.getElementById('developingOverlay');
     const shutterBtn = document.getElementById('shutterBtn');
     const btnResetVisor = document.getElementById('btnResetVisor');
@@ -338,11 +508,14 @@
     const plateCounterDisplay = document.getElementById('plateCounterDisplay');
     const sviDisplay = document.getElementById('sviDisplay');
     const envIndicator = document.getElementById('envIndicator');
+    const activeLensTitle = document.getElementById('activeLensTitle');
     const sfxAudio = document.getElementById('sfxAudio');
     const forensicAudio = document.getElementById('forensicAudio');
     const mobileJumpscareLayer = document.getElementById('mobileJumpscareLayer');
     const mobileJumpscareVideo = document.getElementById('mobileJumpscareVideo');
 
+    let selectedMode = "ghost"; // "investigation" ou "ghost"
+    let cameraStarted = false;
     let geminiApiKey = "";
     let geminiModel = "gemini-3.8-flash";
     let geminiImageModel = "gemini-2.5-flash-image";
@@ -354,11 +527,87 @@
     let currentTotem = "tv";
     let isTestMode = false;
     let vincentDone = false;
+    let elliePhotoCount = 0;
     let lastMobileEventTimestamp = Date.now();
     let lastReloadTimestamp = 0;
 
+    // Textos oficiais do Doutor para o Investigation Mode
+    const DOCTOR_LOGS = {
+      skull: {
+        audio: "Totem_skull.wav",
+        svi: "SVI: 50 SHARP",
+        text: "I feel a weak sign... might have heard something in the parabolic as well... whatever, or whoever is there might be younger than 25... judging by the SVI... just 50. 50 sharp. Zero response in the Spirit Box."
+      },
+      tv: {
+        audio: "Totem_tv.wav",
+        svi: "SVI: +137",
+        text: "Strong ectoplasm manifestation... not consistent electromagnetism though. My studies show a +137 of SVI coming from it. Full-transformed creature, green eyes disappeared. No signs in the parabolic, but static noise in the Spirit Box."
+      },
+      tubes: {
+        audio: "Totem_tubes.wav",
+        svi: "SVI: +40 (SAMPLES)",
+        text: "My samples. Here lies the last piece of access to my secret journal entry."
+      },
+      mannequin: {
+        audio: "Totem_mannequin.wav",
+        svi: "SVI: N/A",
+        text: "This is what remains of Vincent's former wife... Ellie's mother. The younger son is also gone. She used it as pure sadistic intimidation for Uptime Students not to carry out the investigation."
+      },
+      wifi: {
+        audio: "Totem_wifi.wav",
+        svi: "SVI: 0 (EMF 5)",
+        text: "Strong, insane EMF level! High electricity activity. This entity thrives on electric power. No SVI, though... I recall a bleeding patient back in Innseye Asylum..."
+      },
+      spider: {
+        audio: "Totem_spider.wav",
+        svi: "SVI: N/A",
+        text: "Uh, this is utterly disgusting. The mutation caught animals alike."
+      },
+      mummy: {
+        audio: "Totem_mummy.wav",
+        svi: "SVI: N/A",
+        text: "This one is gone. Clean, but gone."
+      }
+    };
+
     function getMediaPath(filename) {
       return encodeURI("media/" + filename);
+    }
+
+    async function selectCameraMode(mode) {
+      selectedMode = mode;
+      lensMenuScreen.style.display = "none";
+      resetVisor();
+
+      if (!cameraStarted) {
+        await startCamera();
+      }
+      updateModeVisuals();
+    }
+
+    function openLensMenu() {
+      forensicAudio.pause();
+      lensMenuScreen.style.display = "flex";
+    }
+
+    function updateModeVisuals() {
+      const corners = [document.getElementById('retTl'), document.getElementById('retTr'), document.getElementById('retBl'), document.getElementById('retBr')];
+      if (selectedMode === "investigation") {
+        activeLensTitle.textContent = "🔬 INVESTIGATION LENS";
+        activeLensTitle.style.color = "var(--cyan)";
+        shutterBtn.style.background = "radial-gradient(circle, #38bdf8 0%, #0369a1 100%)";
+        corners.forEach(c => c.style.borderColor = "var(--cyan)");
+        statusBanner.textContent = "INVESTIGATION MODE // SCAN TOTEMS FOR DOCTOR LOGS";
+        statusBanner.style.borderLeftColor = "var(--cyan)";
+      } else {
+        activeLensTitle.textContent = "👻 GHOST LENS (INPAINT)";
+        activeLensTitle.style.color = "var(--green)";
+        shutterBtn.style.background = "radial-gradient(circle, #10b981 0%, #064e3b 100%)";
+        corners.forEach(c => c.style.borderColor = "var(--green)");
+        statusBanner.textContent = "GHOST MODE // KEEP 1.5m-2m DISTANCE FOR 3D INPAINT";
+        statusBanner.style.borderLeftColor = "var(--green)";
+      }
+      updateHudTopLabel();
     }
 
     async function startCamera() {
@@ -368,18 +617,19 @@
           audio: false
         });
         videoFeed.srcObject = stream;
+        cameraStarted = true;
       } catch (err) {
         statusBanner.textContent = "CAMERA ERROR: CHECK HTTPS PERMISSIONS";
         statusBanner.style.borderLeftColor = "var(--red)";
       }
     }
-    startCamera();
 
     function updateHudTopLabel() {
       const envTxt = isTestMode ? "ENV: HOME (TEST)" : "ENV: LIVE SCHOOL";
-      const engTxt = (cameraEngine === "inpaint") ? "INPAINT AI" : "CANVAS FALLBACK";
+      const engTxt = (cameraEngine === "inpaint") ? "NANO BANANA AI" : "CANVAS FALLBACK";
       envIndicator.textContent = `${envTxt} // ${engTxt}`;
       envIndicator.style.color = isTestMode ? "var(--amber)" : "#94a3b8";
+      menuEnvStatus.textContent = `${envTxt} | ENGINE: ${engTxt}`;
     }
 
     sessionRef.on('value', snap => {
@@ -395,7 +645,6 @@
         geminiApiKey = "";
       }
 
-      // Ignora automaticamente o modelo antigo descontinuado
       if (data.gemini_model && data.gemini_model !== "gemini-2.5-flash") {
         geminiModel = data.gemini_model;
       }
@@ -458,9 +707,9 @@
       const ctx = captureCanvas.getContext('2d');
       ctx.drawImage(videoFeed, 0, 0, captureCanvas.width, captureCanvas.height);
 
-      const base64Data = captureCanvas.toDataURL('image/jpeg', 0.82).split(',')[1];
+      const base64Data = captureCanvas.toDataURL('image/jpeg', 0.85).split(',')[1];
 
-      statusBanner.textContent = "EXPOSING PLATE // RUNNING SPECTRAL GATEKEEPER...";
+      statusBanner.textContent = "ANALYZING OPTICAL TARGET...";
       statusBanner.style.borderLeftColor = "var(--amber)";
 
       await runVisualGatekeeper(base64Data);
@@ -471,7 +720,6 @@
       setTimeout(() => { shutterFlash.style.opacity = "0"; }, 90);
     }
 
-    // Extrai automaticamente o modelo sugerido caso o Google retorne mensagem de atualização de modelo
     function extractSuggestedModel(errMsg) {
       if (!errMsg) return null;
       const match = errMsg.match(/gemini-[0-9.]+-[a-z0-9-]+/i);
@@ -490,10 +738,10 @@
 
       const homeTargetsPrompt = `Analyze the image for test targets in Home Environment:
 - "fan": Electric desk fan or standing fan.
-- "chair": Dark blue armchair or office chair.
-- "tv": Home television screen.
+- "chair": Dark blue armchair, office chair, or any chair.
+- "tv": Home television screen or monitor.
 - "table": Glass dining/coffee table.
-- "tree": Christmas tree or large indoor decorative plant.`;
+- "tree": Christmas tree or indoor plant.`;
 
       const promptText = `You are a forensic computer vision gatekeeper for an asylum escape room.
 ${isTestMode ? homeTargetsPrompt : schoolTargetsPrompt}
@@ -533,7 +781,12 @@ Strictly output a valid JSON object without markdown:
 
         const rawText = resData.candidates[0].content.parts[0].text;
         const parsed = JSON.parse(cleanJsonString(rawText));
-        await handleDetectionOutcome(parsed.target, parsed.confidence, imageBase64);
+
+        if (selectedMode === "investigation") {
+          handleInvestigationOutcome(parsed.target, parsed.confidence);
+        } else {
+          await handleGhostModeOutcome(parsed.target, parsed.confidence, imageBase64);
+        }
 
       } catch (err) {
         console.error("Gatekeeper Error:", err);
@@ -541,9 +794,51 @@ Strictly output a valid JSON object without markdown:
       }
     }
 
-    async function handleDetectionOutcome(target, confidence, sceneBase64) {
-      if (!target || target === "none" || confidence < 0.55) {
-        displayStaticFailure("NO ANOMALY OR FORENSIC TRACE DETECTED");
+    // =========================================================================
+    // ROTA A: INVESTIGATION MODE (FOTO LIMPA + TEXTO DO DOUTOR + ÁUDIO DOUTOR)
+    // =========================================================================
+    function handleInvestigationOutcome(target, confidence) {
+      if (!target || target === "none" || confidence < 0.50) {
+        displayStaticFailure("NO FORENSIC EVIDENCE DETECTED IN FRAME");
+        return;
+      }
+
+      let mapped = target;
+      if (isTestMode) {
+        if (target === "chair") mapped = "skull";
+        else if (target === "tv") mapped = "wifi";
+        else if (target === "fan") mapped = "tv";
+        else if (target === "table") mapped = "mannequin";
+        else if (target === "tree") mapped = "spider";
+      }
+
+      const logEntry = DOCTOR_LOGS[mapped];
+      if (!logEntry) {
+        displayStaticFailure("UNCLASSIFIED OBJECT // NO DOCTOR LOG AVAILABLE");
+        return;
+      }
+
+      // Congela a foto limpa (sem fantasma) e exibe a caixa do Doutor com o áudio
+      freezeView(captureCanvas.toDataURL('image/jpeg', 0.9));
+      doctorEvidenceBox.style.display = "flex";
+      docBoxSvi.textContent = logEntry.svi;
+      docBoxText.textContent = `"${logEntry.text}"`;
+
+      statusBanner.textContent = `FORENSIC LOG EXTRACTED // ${mapped.toUpperCase()}`;
+      statusBanner.style.borderLeftColor = "var(--cyan)";
+      sviDisplay.textContent = logEntry.svi;
+
+      forensicAudio.src = getMediaPath(logEntry.audio);
+      forensicAudio.currentTime = 0;
+      forensicAudio.play().catch(e => console.log(e));
+    }
+
+    // =========================================================================
+    // ROTA B: GHOST MODE (INPAINTING 3D CONSISTENTE NANO BANANA + ZERO ÁUDIO DOUTOR)
+    // =========================================================================
+    async function handleGhostModeOutcome(target, confidence, sceneBase64) {
+      if (!target || target === "none" || confidence < 0.50) {
+        displayStaticFailure("NO ECTOPLASMIC SIGNATURE IN THIS SECTOR");
         return;
       }
 
@@ -554,81 +849,86 @@ Strictly output a valid JSON object without markdown:
         else if (target === "fan") mappedTarget = "tv";
       }
 
-      if (mappedTarget === "tubes") {
-        playForensicReport("Totem_tubes.wav", "FORENSIC LOG: CHEMICAL SAMPLES ACCUMULATED (40)", "SVI: +40");
-        freezeView(captureCanvas.toDataURL());
-        return;
-      }
-
+      // 1. ELLIE (Caveira na Escola / Cadeira em Casa) -> SEM GHOST ORBS!
       if (mappedTarget === "skull") {
-        const elliePrompt = `Image 1 is the real room photograph taken by the student. Image 2 is the character reference for the female ghost entity (Ellie). Edit Image 1 to naturally inpaint and integrate the exact female entity from Image 2 into the room near the skull/desk or sitting on the chair. Preserve the original room walls, furniture, framing, and lighting geometry of Image 1. Give her glowing green eyes, semi-translucent spectral blending, and natural shadows. CRITICAL: Keep the air around her completely clear of any floating light specks or bokeh spheres.`;
+        elliePhotoCount++;
+        const poseDesc = (elliePhotoCount % 2 === 1)
+          ? "sitting naturally on the chair/surface right in front of the camera, leaning slightly forward with both hands resting near or holding the skull/armrest"
+          : "standing right behind the chair/table with her head tilted eerily to the side, staring directly into the camera lens";
 
-        await renderEntityWithSelectedEngine(sceneBase64, "media/Ellie.jpg", false, elliePrompt, () => {
-          playForensicReport("Totem_skull.wav", "ENTITY DETECTED: ELLIE HAZAN (BANSHEE)", "SVI: 50 SHARP");
-        });
+        const elliePrompt = `You are an expert photorealistic VFX compositor.
+Image 1 is a real photograph of a room taken by a student.
+Image 2 is the character reference sheet for a female ghost entity (Ellie).
+TASK: Generate a new version of Image 1 where the exact female character from Image 2 is physically integrated into the 3D space of Image 1, ${poseDesc}.
+CRITICAL RULES:
+1. DO NOT flatly paste or alpha-blend Image 2 as a 2D sticker. Re-render her body posture, perspective, scale, and lighting so she physically occupies the room in Image 1 and casts realistic shadows on the furniture/floor.
+2. Keep the room walls, furniture, and framing of Image 1 intact.
+3. Give her glowing emerald-green eyes and pale spectral skin.
+4. Keep the air around her 100% clean—DO NOT add any floating light spheres or bokeh specks.`;
+
+        await renderEntityWithSelectedEngine(sceneBase64, "media/Ellie.jpg", false, elliePrompt, "MANIFESTATION: ELLIE HAZAN");
         return;
       }
 
+      // 2. VINCENT (Roteador Wi-Fi na Escola / TV em Casa) -> COM GHOST ORBS (BOKEH SPECKS)
       if (mappedTarget === "wifi") {
         if (vincentDone) {
-          statusBanner.textContent = "RESIDUAL ESSENCE PURGED // ALREADY RECORDED";
+          statusBanner.textContent = "RESIDUAL ESSENCE ALREADY CAPTURED // RECHARGE NEEDED";
           statusBanner.style.borderLeftColor = "var(--cyan)";
           playSfx("Quick Hiss 1.mp3");
           freezeView(captureCanvas.toDataURL());
           return;
         }
 
-        const vincentPrompt = `Image 1 is the real room photograph taken by the student. Image 2 is the character reference for the male ghost entity (Vincent). Edit Image 1 to naturally inpaint and integrate the exact male entity from Image 2 standing near the Wi-Fi router or screen, interacting with the wires with subtle cyan electrical sparks on his fingers. Preserve the original room walls, framing, and lighting of Image 1. CRITICAL: Floating in the air near the figure, add two tiny, out-of-focus glowing pale-white light specks (subtle translucent optical bokeh dust particles / pinpoint lens flare spheres softly illuminated against the dark background).`;
+        const vincentPrompt = `You are an expert photorealistic VFX compositor.
+Image 1 is a real photograph of a room/wall taken by a student.
+Image 2 is the character reference sheet for a male ghost entity (Vincent).
+TASK: Generate a new version of Image 1 where the exact male character from Image 2 is physically standing inside the 3D space of Image 1 right next to the electronic device/screen/router, reaching out his hand toward the cables with subtle cyan electrical sparks arcing between his fingers.
+CRITICAL RULES:
+1. DO NOT flatly paste Image 2 as a 2D cutout. Adapt his 3D angle, scale, and ambient lighting to match the exact camera perspective of Image 1.
+2. Preserve the room background and objects of Image 1.
+3. Floating in the air near his shoulder, add two tiny, out-of-focus glowing pale-white light specks (subtle translucent optical bokeh dust particles / pinpoint lens flare spheres).`;
 
-        await renderEntityWithSelectedEngine(sceneBase64, "media/Vincent.jpg", true, vincentPrompt, () => {
+        await renderEntityWithSelectedEngine(sceneBase64, "media/Vincent.jpg", true, vincentPrompt, "MANIFESTATION: VINCENT HAZAN", () => {
           sessionRef.update({ vincent_done: true });
-          playForensicReport("Totem_wifi.wav", "ENTITY DETECTED: VINCENT HAZAN (JINN)", "SVI: 0 (EMF LEVEL 5)");
         });
         return;
       }
 
+      // 3. IREENA (Se o totem fotografado for o Totem Ativo atual da Ireena!) -> COM GHOST ORBS
       if (target === currentTotem || mappedTarget === currentTotem) {
-        let poseInstruction = "manifesting naturally inside the room near the central screen/totem, glaring forward with hollow dark eyes";
+        let poseInstruction = "standing menacingly inside the 3D space of the room right beside the object, glaring directly into the camera lens with hollow pitch-black eyes and glowing green veins";
         if (target === "mannequin") {
-          poseInstruction = "crawling paranormally upside-down on the ceiling concrete beam right above the headless mannequin, limbs twisted unnaturally against the ceiling surface";
+          poseInstruction = "crawling upside-down on the ceiling concrete beam right above the headless mannequin, her limbs contorted naturally against the ceiling geometry";
         } else if (target === "mummy") {
-          poseInstruction = "lurking closely behind the wrapped mummy prop by the window, peering over its shoulder";
+          poseInstruction = "lurking directly behind the wrapped mummy prop by the window, peering over its shoulder into the room";
         } else if (target === "spider") {
-          poseInstruction = "emerging from the shadows right next to the giant spider web on the wall";
+          poseInstruction = "emerging from the dark wall shadows right beside the giant spider web";
+        } else if (target === "outside") {
+          poseInstruction = "standing behind the glass entrance doors in a pitch-black darkened hallway, pressing her pale hands against the glass";
         }
 
-        const ireenaPrompt = `Image 1 is the real room photograph taken by the student. Image 2 is the character reference for the female ghost entity (Ireena). Edit Image 1 to naturally inpaint and integrate the exact female entity from Image 2 ${poseInstruction}. Preserve the original room walls, objects, framing, and lighting geometry of Image 1, casting realistic shadows. CRITICAL: Floating in the air near the figure, add two tiny, out-of-focus glowing pale-white light specks (subtle translucent optical bokeh dust particles / pinpoint lens flare spheres softly illuminated against the dark background).`;
+        const ireenaPrompt = `You are an expert photorealistic VFX compositor.
+Image 1 is a real photograph of a room taken by a student.
+Image 2 is the character reference sheet for the female bio-mutant ghost entity (Ireena).
+TASK: Generate a new version of Image 1 where the exact female entity from Image 2 is physically integrated into the 3D space of Image 1, ${poseInstruction}.
+CRITICAL RULES:
+1. DO NOT flatly paste Image 2 as a 2D sticker. Re-render her posture, 3D perspective, and shadows so she genuinely interacts with the environment of Image 1.
+2. Preserve the room architecture and objects of Image 1.
+3. Floating in the air near the figure, add two tiny, out-of-focus glowing pale-white light specks (subtle translucent optical bokeh dust particles / pinpoint lens flare spheres).`;
 
-        await renderEntityWithSelectedEngine(sceneBase64, "media/Ireena.jpg", true, ireenaPrompt, () => {
-          playForensicReport("Totem_tv.wav", "PRIMARY THREAT CONFIRMED: IREENA (CHANGELING)", "SVI: 137");
-        });
-        return;
-      }
-
-      if (mappedTarget === "mannequin") {
-        playForensicReport("Totem_mannequin.wav", "FORENSIC LOG: VINCENT'S FORMER WIFE CLOTHES", "SVI: N/A");
-        freezeView(captureCanvas.toDataURL());
-        return;
-      }
-      if (mappedTarget === "mummy") {
-        playForensicReport("Totem_mummy.wav", "FORENSIC LOG: CLEAN DISSECTION SPECIMEN", "SVI: N/A");
-        freezeView(captureCanvas.toDataURL());
-        return;
-      }
-      if (mappedTarget === "spider") {
-        playForensicReport("Totem_spider.wav", "FORENSIC LOG: BIOLOGICAL CORRUPTION BEAST", "SVI: N/A");
-        freezeView(captureCanvas.toDataURL());
+        await renderEntityWithSelectedEngine(sceneBase64, "media/Ireena.jpg", true, ireenaPrompt, "MANIFESTATION: IREENA LIMESTONE");
         return;
       }
 
-      displayStaticFailure(`ENTITY DISPERSED // CURRENTLY HAUNTING: ${currentTotem.toUpperCase()}`);
+      displayStaticFailure(`NO ENTITY HERE // IREENA IS HAUNTING ELSEWHERE`);
     }
 
-    async function renderEntityWithSelectedEngine(sceneBase64, ghostImageSrc, hasGhostOrb, inpaintPrompt, onComplete) {
+    async function renderEntityWithSelectedEngine(sceneBase64, ghostImageSrc, hasGhostOrb, inpaintPrompt, successTitle, onAfterSuccess) {
       if (cameraEngine === "canvas") {
-        generateGhostCompositeCanvas(ghostImageSrc, hasGhostOrb, onComplete);
+        generateGhostCompositeCanvas(ghostImageSrc, hasGhostOrb, successTitle, onAfterSuccess);
       } else {
-        await generateGhostInpaintAI(sceneBase64, ghostImageSrc, inpaintPrompt, onComplete);
+        await generateGhostInpaintAI(sceneBase64, ghostImageSrc, inpaintPrompt, successTitle, onAfterSuccess);
       }
     }
 
@@ -651,10 +951,10 @@ Strictly output a valid JSON object without markdown:
       });
     }
 
-    async function generateGhostInpaintAI(sceneBase64, ghostImageSrc, inpaintPrompt, onComplete) {
+    async function generateGhostInpaintAI(sceneBase64, ghostImageSrc, inpaintPrompt, successTitle, onAfterSuccess) {
       developingOverlay.style.display = "flex";
-      statusBanner.textContent = "NANO BANANA INPAINTING // MANIFESTING ENTITY...";
-      statusBanner.style.borderLeftColor = "var(--cyan)";
+      statusBanner.textContent = "NANO BANANA AI // COMPOSITING 3D ENTITY...";
+      statusBanner.style.borderLeftColor = "var(--green)";
 
       try {
         const ghostRefBase64 = await loadReferenceImageBase64(ghostImageSrc);
@@ -687,23 +987,28 @@ Strictly output a valid JSON object without markdown:
         const imgPart = parts.find(p => p.inlineData && p.inlineData.data);
 
         if (!imgPart) {
-          throw new Error("No image returned by model");
+          throw new Error("Model returned text only (no image)");
         }
 
         const mime = imgPart.inlineData.mimeType || "image/jpeg";
         const finalImgSrc = `data:${mime};base64,${imgPart.inlineData.data}`;
 
         freezeView(finalImgSrc);
-        if (onComplete) onComplete();
+        statusBanner.textContent = `${successTitle} // [NANO BANANA AI RENDER]`;
+        statusBanner.style.borderLeftColor = "var(--green)";
+        sviDisplay.textContent = "RENDER: ✨ NANO BANANA 3D";
+        playSfx("Whispers 1.mp3");
+
+        if (onAfterSuccess) onAfterSuccess();
 
       } catch (err) {
         developingOverlay.style.display = "none";
         console.error("Inpaint AI Error:", err);
-        displayStaticFailure(`INPAINT ERROR (${err.message}) // SWITCH TO CANVAS IF NEEDED`);
+        displayStaticFailure(`NANO BANANA ERROR: ${err.message}`);
       }
     }
 
-    function generateGhostCompositeCanvas(ghostImageSrc, hasGhostOrb, onComplete) {
+    function generateGhostCompositeCanvas(ghostImageSrc, hasGhostOrb, successTitle, onAfterSuccess) {
       compositeCanvas.width = captureCanvas.width;
       compositeCanvas.height = captureCanvas.height;
       const cCtx = compositeCanvas.getContext('2d');
@@ -732,7 +1037,12 @@ Strictly output a valid JSON object without markdown:
         applyFilmGrain(cCtx, compositeCanvas.width, compositeCanvas.height);
 
         freezeView(compositeCanvas.toDataURL('image/jpeg', 0.9));
-        if (onComplete) onComplete();
+        statusBanner.textContent = `${successTitle} // [CANVAS FALLBACK]`;
+        statusBanner.style.borderLeftColor = "var(--amber)";
+        sviDisplay.textContent = "RENDER: 🖼️ CANVAS FALLBACK";
+        playSfx("Whispers 1.mp3");
+
+        if (onAfterSuccess) onAfterSuccess();
       };
       ghostImg.onerror = () => {
         displayStaticFailure("OPTICAL ABERRATION // REFRACTION FAILED");
@@ -776,11 +1086,10 @@ Strictly output a valid JSON object without markdown:
     function resetVisor() {
       capturedImageDisplay.style.display = "none";
       btnResetVisor.style.display = "none";
+      doctorEvidenceBox.style.display = "none";
       shutterBtn.disabled = false;
-      statusBanner.textContent = "SENSOR READY // KEEP 1.5m-2m CONTAINMENT DISTANCE";
-      statusBanner.style.borderLeftColor = "var(--green)";
-      sviDisplay.textContent = "SPECTRAL INDEX: STANDBY";
       forensicAudio.pause();
+      updateModeVisuals();
     }
 
     function displayStaticFailure(message) {
@@ -788,16 +1097,6 @@ Strictly output a valid JSON object without markdown:
       statusBanner.style.borderLeftColor = "var(--red)";
       playSfx("Quick Hiss 1.mp3");
       freezeView(captureCanvas.toDataURL());
-    }
-
-    function playForensicReport(audioFile, bannerText, sviText) {
-      statusBanner.textContent = bannerText;
-      statusBanner.style.borderLeftColor = "var(--green)";
-      sviDisplay.textContent = `SPECTRAL INDEX: ${sviText}`;
-
-      forensicAudio.src = getMediaPath(audioFile);
-      forensicAudio.currentTime = 0;
-      forensicAudio.play().catch(e => console.log(e));
     }
 
     function playSfx(audioFile) {
