@@ -798,7 +798,7 @@
     }
 
     function updateTelemetryCalculations() {
-      nextCheckSeconds = Math.round(300 * Math.pow(0.2, currentHate / 100));
+      nextCheckSeconds = Math.round(180 * Math.pow(0.2, currentHate / 100));
       document.getElementById('pgTimerDisplay').textContent = isGameOn ? `${nextCheckSeconds}s` : "PAUSADO (OFF)";
 
       let huntChance = 0;
@@ -924,13 +924,14 @@
       huntingActive = false;
       gracePeriod = true;
       clearTimeout(huntTimerTimeout);
-      setHate(40);
+      setHate(0); // Zera o Hate (0%) para abrir a janela de pedir o vídeo da Ellie!
 
       sessionRef.update({
         status: "vincent_glitch",
+        hate: 0,
         tv_event: { active: true, video: "Vincent-Glitch.mp4", timestamp: Date.now() }
       });
-      logMsg(`🛡️ GHOST SHIELD VENCEU: Vincent assumiu a TV! Hate reduzido para 40%.`);
+      logMsg(`🛡️ GHOST SHIELD VENCEU: Vincent assumiu a TV! Hate ZERADO (0%) para janela da Ellie.`);
 
       setTimeout(() => {
         gracePeriod = false;
