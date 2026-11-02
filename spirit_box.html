@@ -242,8 +242,6 @@
     <video id="mobileJumpscareVideo" playsinline></video>
   </div>
 
-  <audio id="sfxAudio" preload="auto"></audio>
-
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyAk-aZpWPXD0za40kDF7kwL9ej3EfaYy6E",
@@ -267,7 +265,6 @@
     const pttBtn = document.getElementById('pttBtn');
     const cooldownBarContainer = document.getElementById('cooldownBarContainer');
     const cooldownBar = document.getElementById('cooldownBar');
-    const sfxAudio = document.getElementById('sfxAudio');
     const mobileJumpscareLayer = document.getElementById('mobileJumpscareLayer');
     const mobileJumpscareVideo = document.getElementById('mobileJumpscareVideo');
 
@@ -295,6 +292,51 @@
       }
       if (voiceAudioCtx && voiceAudioCtx.state === "suspended") {
         voiceAudioCtx.resume();
+      }
+    }
+
+    // =========================================================================
+    // GERADOR DE ESTÁTICA 8-BIT PURO EM HTML (SUBSTITUI MP3 DE WHISPER/HATE)
+    // =========================================================================
+    function play8BitStatic(duration = 0.65, volume = 0.22) {
+      try {
+        ensureAudioContext();
+        if (!voiceAudioCtx) return;
+
+        const sampleRate = voiceAudioCtx.sampleRate;
+        const bufferSize = Math.floor(sampleRate * duration);
+        const buffer = voiceAudioCtx.createBuffer(1, bufferSize, sampleRate);
+        const data = buffer.getChannelData(0);
+
+        // Cria ruído quantizado/pixelado estilo 8-bit (sample-and-hold)
+        let holdSample = 0;
+        const stepHold = 18; 
+        for (let i = 0; i < bufferSize; i++) {
+          if (i % stepHold === 0) {
+            holdSample = (Math.random() > 0.5 ? 1 : -1) * (0.4 + Math.random() * 0.6);
+          }
+          data[i] = holdSample;
+        }
+
+        const noiseSource = voiceAudioCtx.createBufferSource();
+        noiseSource.buffer = buffer;
+
+        const filter = voiceAudioCtx.createBiquadFilter();
+        filter.type = "bandpass";
+        filter.frequency.value = 1250;
+        filter.Q.value = 1.4;
+
+        const gainNode = voiceAudioCtx.createGain();
+        gainNode.gain.setValueAtTime(volume, voiceAudioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, voiceAudioCtx.currentTime + duration);
+
+        noiseSource.connect(filter);
+        filter.connect(gainNode);
+        gainNode.connect(voiceAudioCtx.destination);
+
+        noiseSource.start();
+      } catch (e) {
+        console.warn("Static synth error:", e);
       }
     }
 
@@ -382,8 +424,7 @@
     });
 
     function playMicrophonyPenalty() {
-      sfxAudio.src = getMediaPath("Quick Hiss 1.mp3");
-      sfxAudio.play().catch(e => console.log(e));
+      play8BitStatic(0.45, 0.3);
       
       const newHate = Math.min(100, currentHate + 5);
       sessionRef.update({ hate: newHate });
@@ -556,10 +597,9 @@ You MUST output strictly a valid JSON object without markdown formatting:
         const rawText = resData.candidates[0].content.parts[0].text;
         const parsed = JSON.parse(cleanJsonString(rawText));
 
-        let newHate = Math.max(0, Math.min(100, currentHate + (parsed.hate_delta || 0)));
-        sessionRef.update({ hate: newHate });
-
         if (parsed.special_action === "ELLIE_REVELATION") {
+          let newHate = Math.max(0, Math.min(100, currentHate + (parsed.hate_delta || 0)));
+          sessionRef.update({ hate: newHate });
           entityResponseText.textContent = `"${parsed.spoken_text}"`;
           await speakIreenaWithEchoFX(parsed.spoken_text);
           sessionRef.update({
@@ -569,6 +609,8 @@ You MUST output strictly a valid JSON object without markdown formatting:
         }
 
         if (parsed.special_action === "SARCASM_VIDEO") {
+          let newHate = Math.max(0, Math.min(100, currentHate + (parsed.hate_delta || 0)));
+          sessionRef.update({ hate: newHate });
           const sarcasmPool = ["Sarcasm 1.mp4", "Sarcasm 2.mp4", "Sarcasm 3.mp4"];
           const chosenSarcasm = sarcasmPool[Math.floor(Math.random() * sarcasmPool.length)];
           entityResponseText.textContent = `"${parsed.spoken_text}"`;
@@ -580,27 +622,29 @@ You MUST output strictly a valid JSON object without markdown formatting:
         }
 
         if (parsed.special_action === "STUN_FREEZE") {
+          let newHate = Math.max(0, Math.min(100, currentHate + (parsed.hate_delta || 0)));
+          sessionRef.update({ hate: newHate, status: "idle" });
           entityResponseText.textContent = `"${parsed.spoken_text}"`;
           await speakIreenaWithEchoFX(parsed.spoken_text);
-          sessionRef.update({ status: "idle" });
           return;
         }
 
         const roll30 = Math.random() <= 0.30;
         if (roll30) {
+          let newHate = Math.max(0, Math.min(100, currentHate + (parsed.hate_delta || 0)));
+          sessionRef.update({ hate: newHate });
           entityResponseText.textContent = `"${parsed.spoken_text}"`;
           await speakIreenaWithEchoFX(parsed.spoken_text);
         } else {
-          entityResponseText.textContent = "[STATIC NOISE — NO DIRECT RESPONSE]";
-          sfxAudio.src = getMediaPath("Quick Hiss 1.mp3");
-          sfxAudio.play().catch(e => console.log(e));
+          // Nas falhas de 70%, toca apenas a estática 8-bit gerada no HTML, sem disparar MP3 de Hate/Whisper
+          entityResponseText.textContent = "[8-BIT STATIC — NO DIRECT RESPONSE]";
+          play8BitStatic(0.75, 0.24);
         }
 
       } catch (err) {
         console.error("Gemini Failure:", err);
         entityResponseText.textContent = "[HEAVY CARRIER INTERFERENCE]";
-        sfxAudio.src = getMediaPath("Whispers 1.mp3");
-        sfxAudio.play().catch(e => console.log(e));
+        play8BitStatic(0.85, 0.25);
       }
     }
 
@@ -610,10 +654,8 @@ You MUST output strictly a valid JSON object without markdown formatting:
     async function speakIreenaWithEchoFX(text) {
       ensureAudioContext();
 
-      // Toca um leve chiado de rádio de fundo para ambientar a transmissão
-      sfxAudio.src = getMediaPath("Whispers 1.mp3");
-      sfxAudio.volume = 0.25;
-      sfxAudio.play().catch(() => {});
+      // Breve estática 8-bit de entrada em vez do MP3 externo
+      play8BitStatic(0.35, 0.14);
 
       try {
         const ttsPrompt = `Speak in a slow, raspy, cold, sinister ghost whisper filled with suppressed hatred and eerie pauses: "${text}"`;
@@ -651,7 +693,6 @@ You MUST output strictly a valid JSON object without markdown formatting:
       }
     }
 
-    // Decodifica o áudio PCM 24kHz do Gemini TTS e passa pelo Pedal de Eco + Rádio AM
     function playPcmWithRadioEchoPedal(base64Pcm) {
       if (!voiceAudioCtx) return;
 
@@ -673,16 +714,13 @@ You MUST output strictly a valid JSON object without markdown formatting:
 
       const source = voiceAudioCtx.createBufferSource();
       source.buffer = audioBuffer;
-      // Reduz levemente o pitch/velocidade (0.91) para deixá-la ainda mais sombria e cadenciada
       source.playbackRate.value = 0.91;
 
-      // 1. Filtro de Rádio AM / Spirit Box
       const bandpass = voiceAudioCtx.createBiquadFilter();
       bandpass.type = "bandpass";
       bandpass.frequency.value = 1450;
       bandpass.Q.value = 0.85;
 
-      // 2. Pedal de Delay / Eco Espectral (280ms com 45% de feedback)
       const delayNode = voiceAudioCtx.createDelay();
       delayNode.delayTime.value = 0.28;
 
@@ -695,7 +733,6 @@ You MUST output strictly a valid JSON object without markdown formatting:
       const masterGain = voiceAudioCtx.createGain();
       masterGain.gain.value = 1.35;
 
-      // Conexão da cadeia de áudio (Sinal Seco + Loop de Eco)
       source.connect(bandpass);
       bandpass.connect(masterGain);
 
@@ -709,7 +746,6 @@ You MUST output strictly a valid JSON object without markdown formatting:
       source.start();
     }
 
-    // Fallback com repetição de eco fantasma caso o modelo preview-tts oscile
     function speakFallbackSinister(text) {
       if (!('speechSynthesis' in window)) return;
       window.speechSynthesis.cancel();
@@ -720,7 +756,6 @@ You MUST output strictly a valid JSON object without markdown formatting:
       mainUtter.rate = 0.78;
       mainUtter.volume = 1.0;
 
-      // Cria uma segunda camada atrasada em 320ms para simular o Eco no fallback
       const echoUtter = new SpeechSynthesisUtterance(text);
       echoUtter.lang = 'en-US';
       echoUtter.pitch = 0.30;
